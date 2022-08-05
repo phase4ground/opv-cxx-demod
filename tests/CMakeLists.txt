@@ -43,21 +43,13 @@ add_executable (PolynomialInterleaverTest PolynomialInterleaverTest.cpp)
 target_link_libraries(PolynomialInterleaverTest opvcxx GTest::GTest ${PTHREAD})
 gtest_add_tests(PolynomialInterleaverTest "" AUTO)
 
-add_executable (OPVModulatorTest OPVModulatorTest.cpp)
-target_link_libraries(OPVModulatorTest opvcxx GTest::GTest ${PTHREAD} codec2)
-gtest_add_tests(OPVModulatorTest "" AUTO)
-
 add_executable (UtilTest UtilTest.cpp)
 target_link_libraries(UtilTest opvcxx GTest::GTest ${PTHREAD})
 gtest_add_tests(UtilTest "" AUTO)
 
-add_executable (LinkSetupFrameTest LinkSetupFrameTest.cpp)
-target_link_libraries(LinkSetupFrameTest opvcxx GTest::GTest ${PTHREAD})
-gtest_add_tests(LinkSetupFrameTest "" AUTO)
-
-add_executable (SlidingDFTTest SlidingDFTTest.cpp)
-target_link_libraries(SlidingDFTTest opvcxx GTest::GTest ${PTHREAD})
-gtest_add_tests(SlidingDFTTest "" AUTO)
+add_executable (FrameHeaderTest FrameHeaderTest.cpp)
+target_link_libraries(FrameHeaderTest opvcxx GTest::GTest ${PTHREAD})
+gtest_add_tests(FrameHeaderTest "" AUTO)
 
 add_executable (DataCarrierDetectTest DataCarrierDetectTest.cpp)
 target_link_libraries(DataCarrierDetectTest opvcxx GTest::GTest ${PTHREAD})
