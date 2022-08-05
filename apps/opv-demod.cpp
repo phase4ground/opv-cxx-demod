@@ -125,26 +125,26 @@ bool demodulate_audio(OPVFrameDecoder::stream_type1_bytes_t const& audio, int vi
         }
 
         count = opus_decode(opus_decoder, NULL, opus_frame_size_bytes, buf.data(), audio_samples_per_opus_frame, 0);
-        if (count != audio_samples_per_opus_frame && config->verbose)
-        {
-            std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
-        }
-        else if (config->verbose)
-        {
-            std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
-        }
-        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+        // if (count != audio_samples_per_opus_frame && config->verbose)
+        // {
+        //     std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
+        // }
+        // else if (config->verbose)
+        // {
+        //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
+        // }
+        // std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
 
        count = opus_decode(opus_decoder, NULL, opus_frame_size_bytes, buf.data(), audio_samples_per_opus_frame, 0);
-        if (count != audio_samples_per_opus_frame && config->verbose)
-        {
-            std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
-        }
-        else if (config->verbose)
-        {
-            std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
-        }
-        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+        // if (count != audio_samples_per_opus_frame && config->verbose)
+        // {
+        //     std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
+        // }
+        // else if (config->verbose)
+        // {
+        //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
+        // }
+        // std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
     }
     else
     {
@@ -154,25 +154,25 @@ bool demodulate_audio(OPVFrameDecoder::stream_type1_bytes_t const& audio, int vi
         }
 
         count = opus_decode(opus_decoder, audio.data(), opus_frame_size_bytes, buf.data(), audio_samples_per_opus_frame, 0);
-        if (count != audio_samples_per_opus_frame && config->verbose)
-        {
-            std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
-        }
-        else if (config->verbose)
-        {
-            std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
-        }
+        // if (count != audio_samples_per_opus_frame && config->verbose)
+        // {
+        //     std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
+        // }
+        // else if (config->verbose)
+        // {
+        //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
+        // }
         std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
 
        count = opus_decode(opus_decoder, audio.data() + opus_frame_size_bytes, opus_frame_size_bytes, buf.data(), audio_samples_per_opus_frame, 0);
-        if (count != audio_samples_per_opus_frame && config->verbose)
-        {
-            std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
-        }
-        else if (config->verbose)
-        {
-            std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
-        }
+        // if (count != audio_samples_per_opus_frame && config->verbose)
+        // {
+        //     std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
+        // }
+        // else if (config->verbose)
+        // {
+        //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
+        // }
         std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
     }
 

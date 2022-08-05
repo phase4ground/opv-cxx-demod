@@ -277,7 +277,7 @@ void OPVDemodulator<FloatType>::do_unlocked()
 		auto sync_updated = preamble_sync.updated();
 		if (sync_updated)
 		{
-			std::cerr << "\nDetected preamble at sample " << debug_sample_count << std::endl;	//!!! debug
+			// std::cerr << "\nDetected preamble at sample " << debug_sample_count << std::endl;	//!!! debug
 			sync_count = 0;
 			missing_sync_count = 0;
 			need_clock_reset_ = true;
@@ -321,14 +321,14 @@ void OPVDemodulator<FloatType>::do_first_sync()
 
 	if (correlator.index() != sample_index) return;	// We already have symbol timing, we can skip non-peak samples.
 
-	std::cerr << "FIRST sample " << debug_sample_count << std::endl;	//!!! debug
+	// std::cerr << "FIRST sample " << debug_sample_count << std::endl;	//!!! debug
 
 	// We'll check for preamble first. The order doesn't really matter, since the chances
 	// of matching both preamble and the STREAM syncword are zero.
 	sync_triggered = preamble_sync.triggered(correlator);
 	if (sync_triggered > CORRELATION_NEAR_ZERO)
 	{
-		std::cerr << "Seeing preamble at sample " << debug_sample_count << std::endl;	//!!! debug
+		// std::cerr << "Seeing preamble at sample " << debug_sample_count << std::endl;	//!!! debug
 		return;		// Seeing preamble; keep looking. Don't count this as a sync miss.
 	}
 
@@ -388,7 +388,8 @@ void OPVDemodulator<FloatType>::do_stream_sync()
 		missing_sync_count = 0;
 		if (sync_count > 70)	// sample 71 is the first that's nominally in the last symbol of the sync word
 		{
-			std::cerr << "\nDetected STREAM sync word at sample " << debug_sample_count << std::endl; //!!! debug
+			// std::cerr << "\nDetected STREAM sync word at sample " << debug_sample_count << std::endl; //!!! debug
+			std::cerr << ".";
 			update_values(sync_index);
 			demodState = DemodState::FRAME;
 		}
@@ -400,12 +401,14 @@ void OPVDemodulator<FloatType>::do_stream_sync()
 		missing_sync_count += 1;
 		if (missing_sync_count < MAX_MISSING_SYNC)
 		{
-			std::cerr << "\nFaking a STREAM sync word " << missing_sync_count << " at sample " << debug_sample_count << std::endl; //!!! debug
+			// std::cerr << "\nFaking a STREAM sync word " << missing_sync_count << " at sample " << debug_sample_count << std::endl; //!!! debug
+			std::cerr << "!";
 			demodState = DemodState::FRAME;
 		}
 		else
 		{
-			std::cerr << "\nDone faking sync words at sample " << debug_sample_count << std::endl;	//!! debug
+			// std::cerr << "\nDone faking sync words at sample " << debug_sample_count << std::endl;	//!! debug
+			std::cerr << "X";
 			// fputs("\n!SYNC\n", stderr);
 			demodState = DemodState::FIRST_SYNC;
 		}

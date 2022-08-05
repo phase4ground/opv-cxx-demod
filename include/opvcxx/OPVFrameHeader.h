@@ -145,7 +145,7 @@ struct OPVFrameHeader
         }
         auto efh = to_byte_array(efh_hard_bits);
 
-        std::cerr << "\nGolay decoding a frame at sample " << debug_sample_count << std::endl; //!!! debug
+        // std::cerr << "\nGolay decoding a frame at sample " << debug_sample_count << std::endl; //!!! debug
 
 #if 0        //!!! debug
         std::cerr << "Encoded fheader as soft bits: ";
@@ -176,7 +176,7 @@ struct OPVFrameHeader
             received = ((efh[i+0] << 16) & 0xff0000) | ((efh[i+1] << 8) & 0x00ff00) | (efh[i+2] & 0x0000ff);
             if (! Golay24::decode(received, decoded))
             {
-                std::cerr << "Golay decode fail, input " << std::hex << received << std::dec << " at sample " << debug_sample_count << std::endl; //!!! debug
+                // std::cerr << "Golay decode fail, input " << std::hex << received << std::dec << " at sample " << debug_sample_count << std::endl; //!!! debug
                 return HeaderResult::FAIL;
             }
 //            std::cerr << "Golay " << std::hex << received << " decoded to " << decoded << std::dec << std::endl;    //!!! debug
@@ -191,12 +191,12 @@ struct OPVFrameHeader
         }
 
         //!!! debug
-        std::cerr << "Raw decoded fheader: " << std::hex;
-        for (size_t i = 0; i < fheader_size_bytes; i++)
-        {
-            std::cerr << int(raw_fh[i]&0xff) << " ";
-        }
-        std::cerr << std::dec << std::endl;
+        // std::cerr << "Raw decoded fheader: " << std::hex;
+        // for (size_t i = 0; i < fheader_size_bytes; i++)
+        // {
+        //     std::cerr << int(raw_fh[i]&0xff) << " ";
+        // }
+        // std::cerr << std::dec << std::endl;
 
         // If the callsign (after Golay decoding but before callsign decoding) has changed,
         // decode and store the updated callsign
@@ -235,7 +235,7 @@ struct OPVFrameHeader
         }
         else
         {
-            std::cerr << "Frame header decoded, no changes" << std::endl;
+            // std::cerr << "Frame header decoded, no changes" << std::endl;
         }
 
         return result;
