@@ -19,7 +19,7 @@
 #include <iostream>
 #include <vector>
 
-const char VERSION[] = "0.1";
+const char VERSION[] = "0.1.1";
 
 using namespace mobilinkd;
 
@@ -29,6 +29,7 @@ bool debug = false;
 bool noise_blanker = false;
 
 uint32_t debug_sample_count = 0;
+uint32_t samples_since_last_pcm_output_ = 0;
 
 OpusDecoder* opus_decoder;
 
@@ -100,6 +101,27 @@ struct Config
 std::optional<Config> config;
 
 
+void emit_frame_of_silence(void)
+{
+    std::array<int16_t, audio_samples_per_opus_frame> buf;
+
+    if (config->verbose)
+    {
+        std::cerr << "Frameout blanked" << std::endl;
+    }
+    else
+    {
+        std::cerr << "S";
+    }
+
+    buf.fill(0);
+    std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+    std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+
+    samples_since_last_pcm_output_ = 0;
+}
+
+
 bool demodulate_audio(OPVFrameDecoder::stream_type1_bytes_t const& audio, int viterbi_cost)
 {
     bool result = true;
@@ -108,14 +130,7 @@ bool demodulate_audio(OPVFrameDecoder::stream_type1_bytes_t const& audio, int vi
 
     if (noise_blanker && viterbi_cost > 80)
     {
-        if (config->verbose)
-        {
-            std::cerr << "Frameout blanked" << std::endl;
-        }
-
-        buf.fill(0);
-        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
-        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+        emit_frame_of_silence();
     }
     else if (viterbi_cost > 80)
     {
@@ -133,7 +148,7 @@ bool demodulate_audio(OPVFrameDecoder::stream_type1_bytes_t const& audio, int vi
         // {
         //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
         // }
-        // std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
 
        count = opus_decode(opus_decoder, NULL, opus_frame_size_bytes, buf.data(), audio_samples_per_opus_frame, 0);
         // if (count != audio_samples_per_opus_frame && config->verbose)
@@ -144,7 +159,10 @@ bool demodulate_audio(OPVFrameDecoder::stream_type1_bytes_t const& audio, int vi
         // {
         //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
         // }
-        // std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+
+        samples_since_last_pcm_output_ = 0;
+
     }
     else
     {
@@ -174,6 +192,8 @@ bool demodulate_audio(OPVFrameDecoder::stream_type1_bytes_t const& audio, int vi
         //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
         // }
         std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+
+        samples_since_last_pcm_output_ = 0;
     }
 
     return result;
@@ -282,6 +302,17 @@ int main(int argc, char* argv[])
         if (invert_input) sample *= -1;
         demod(sample / 44000.0);
         debug_sample_count++;
+
+        // If normal processing has not resulted in PCM output to the speaker for just over
+        // a frame time, go ahead and emit a silent frame of audio. This in intended to keep
+        // the audio output from underrunning.
+        // We don't do this on an exact sample count because timing may be drifting during
+        // a transmission, but we don't want to wait as long as one PCM audio sample in case
+        // the audio codec is unbuffered.
+        if (++samples_since_last_pcm_output_ >= samples_per_frame + sample_rate/audio_sample_rate)
+        {
+            emit_frame_of_silence();    // this also resets samples_since_last_pcm_output_
+        }
     }
 
     std::cerr << std::endl;
