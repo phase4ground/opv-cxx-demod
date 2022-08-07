@@ -29,7 +29,8 @@ namespace mobilinkd
     const int stream_type4_bytes = stream_type4_size / 8;
     
     const int baseband_frame_symbols = 16 / 2 + stream_type4_size / 2;   // dibits or symbols in sync+payload in a frame
-
+    const int baseband_frame_packed_bytes = baseband_frame_symbols / 4;  // packed bytes in sync_payload in a frame
+    
     const int bert_frame_total_size = stream_frame_payload_size;
     const int bert_frame_prime_size = 631;      // largest prime smaller than bert_frame_total_size
 

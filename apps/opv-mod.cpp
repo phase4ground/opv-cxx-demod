@@ -10,6 +10,7 @@
 #include "Util.h"
 #include "Golay24.h"
 #include "OPVFrameHeader.h"
+#include "UDPNetwork.h"
 
 #include "Numerology.h"
 #include <opus/opus.h>
@@ -46,6 +47,9 @@ struct Config
     bool debug = false;
     bool quiet = false;
     bool bitstream = false; // default is baseband audio
+    bool output_to_network = false; // default is output to stdout
+    std::string network_ip;
+    uint16_t network_port;
     uint32_t bert = 0; // Frames of Bit error rate testing.
     uint64_t token = 0; // authentication token for frame header
     bool invert = false;
@@ -68,6 +72,12 @@ struct Config
                 "authentication token")
             ("bitstream,b", po::bool_switch(&result.bitstream),
                 "output bitstream (default is baseband).")
+            ("network,n", po::bool_switch(&result.output_to_network),
+                "output to network (implies --bitstream)")
+            ("ip", po::value<std::string>(&result.network_ip)->default_value("127.0.0.1"),
+                "IP address (used with --network)")
+            ("port", po::value<uint16_t>(&result.network_port)->default_value(7373),
+                "output to port (used with --network)")
             ("bert,B", po::value<uint32_t>(&result.bert)->default_value(0),
                 "number of BERT frames to output (default or 0 to read audio from STDIN instead).")
             ("invert,i", po::bool_switch(&result.invert), "invert the output baseband (ignored for bitstream)")
@@ -121,6 +131,7 @@ struct Config
 std::optional<Config> config;
 
 std::atomic<bool> running{false};
+UDPNetwork udp;
 
 bool invert = false;
 
@@ -208,8 +219,31 @@ std::array<int16_t, N*10> symbols_to_baseband(std::array<int8_t, N> symbols)
 using bitstream_t = std::array<int8_t, stream_type4_size>;
 
 
+// output a frame of type4 bits, including the sync word, to UDP (packed)
+void output_bitstream_to_UDP(std::array<uint8_t, 2> sync_word, const bitstream_t& frame)
+{
+    std::array<uint8_t, baseband_frame_packed_bytes> buffer;
+    size_t index = 0;
+
+    for (auto c : sync_word) buffer[index++] = c;   // output the sync word
+    for (size_t i = 0; i != frame.size(); i += 8)   // output the fheader and data
+    {
+        uint8_t c = 0;
+        for (size_t j = 0; j != 8; ++j)
+        {
+            c <<= 1;
+            c |= frame[i + j];
+        }
+        buffer[index++] = c;
+    }
+    assert(index == baseband_frame_packed_bytes);
+
+    udp.send_packet(baseband_frame_packed_bytes, (const uint8_t *)buffer.data());
+}
+
+
 // output a frame of type4 bits, including the sync word, to cout (packed)
-void output_bitstream(std::array<uint8_t, 2> sync_word, const bitstream_t& frame)
+void output_bitstream_to_stdout(std::array<uint8_t, 2> sync_word, const bitstream_t& frame)
 {
     for (auto c : sync_word) std::cout << c;        // output the sync word
     for (size_t i = 0; i != frame.size(); i += 8)   // output the fheader and data
@@ -221,6 +255,20 @@ void output_bitstream(std::array<uint8_t, 2> sync_word, const bitstream_t& frame
             c |= frame[i + j];
         }
         std::cout << c;
+    }
+}
+
+
+// output a frame of type4 bits, including the sync word, to output destination
+void output_bitstream(std::array<uint8_t, 2> sync_word, const bitstream_t& frame)
+{
+    if (config->output_to_network)
+    {
+        output_bitstream_to_UDP(sync_word, frame);
+    }
+    else
+    {
+        output_bitstream_to_stdout(sync_word, frame);
     }
 }
 
@@ -254,7 +302,14 @@ void send_constant_frame(const uint8_t value)
     preamble_bytes.fill(value);
     if (config->bitstream)
     {
-        for (auto c : preamble_bytes) std::cout << c;
+        if (config->output_to_network)
+        {
+            udp.send_packet(preamble_bytes.size(), (const uint8_t *)preamble_bytes.data());
+        }
+        else
+        {
+            for (auto c : preamble_bytes) std::cout << c;
+        }
     }
     else // baseband
     {
@@ -280,6 +335,8 @@ void send_preamble()
 // frequency modulation values and not magnitudes.)
 void send_dead_carrier()
 {
+    if (config->output_to_network) return;  // don't need dead carrier in this case
+
     if (config->verbose) std::cerr << "Sending dead carrier: " << stream_type4_size + 16 << " bits." << std::endl;
 
     send_constant_frame(0);     // +1, +1, +1, +1 = 00 00 00 00 == 0x00
@@ -598,6 +655,12 @@ int main(int argc, char* argv[])
     if (!config) return 0;
 
     invert = config->invert;
+
+    if (config->output_to_network)
+    {
+        config->bitstream = true;
+        udp.network_setup(config->network_ip, config->network_port);
+    }
 
     OPVFrameHeader::token_t access_token;
     std::cerr << "Access token: 0x" << std::hex << std::setw(6) << config->token << std::dec << std::endl;
