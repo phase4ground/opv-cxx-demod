@@ -20,7 +20,14 @@ baseband stream at 187k samples per second, 16-bit signed integer, 1 channel to 
 
 ### Prerequisites
 
-This code requires the libopus-dev, boost-devel and gtest-devel packages be installed.
+This code requires the libopus-dev, boost-devel, gtest-devel, and cmake packages be installed.
+
+On some systems, boost-devel is called libboost-dev, and you also need to install
+libboost-program-optionsX.XX-dev, where X.XX matches the version number of libboost-dev.
+When you run `sudo apt install libboost-dev`, watch the output for suggested packages
+to find the exact name.
+
+On some systems, gtest-devel is called libgtest-dev.
 
 It also requires a modern C++17 compiler (GCC 8 minimum).
 
