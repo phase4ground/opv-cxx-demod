@@ -46,7 +46,7 @@ It also requires a modern C++17 compiler (GCC 8 minimum).
 This program was designed to be used with RTL-SDR, specifically rtl-fm.
 This is untested at this time.
 ```
-    rtl_fm -E offset -f 905.05M -s 187k | opv-demod -l | play -b 16 -r 48000 -c1 -t s16 -
+    rtl_fm -E offset -f 905.05M -s 187k | opv-demod | play -b 16 -r 48000 -c1 -t s16 -
 ```
 
 You should run this in a terminal window that is 132 characters wide. It
@@ -54,7 +54,7 @@ will output diagnostic information on a single line in the window.
 
 ## Streaming opv-mod to opv-demod for testing
 
-    sox ~/audio/brain.wav -t raw - | opv-mod -S KB5MU | opv-demod -l -d | play -q -b 16 -r 48000 -c1 -t s16 -
+    sox ~/audio/brain.wav -t raw - | opv-mod -S KB5MU | opv-demod -d | play -q -b 16 -r 48000 -c1 -t s16 -
 
 The input audio stream must be 1 channel, 16-bit signed integer, 48000 samples per second.
 
