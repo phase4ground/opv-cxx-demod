@@ -4,9 +4,11 @@ Opulent Voice Modulator and Demodulator in C++ (GPL)
 
 ## opv-demod
 This program reads a 187k samples per second 16-bit signed integer little-endian, single
-channel, Opulent Voice 4-FSK baseband stream from `stdin` and writes a demodulated/decoded
-48k samples per second 16-bit signed single channel audio stream (if any audio is received)
-to `stdout`.
+channel, Opulent Voice 4-FSK baseband stream from `stdin` and demodulates it. If the
+stream contains voice data, it is decoded with Opus, and the resulting audio is written
+to `stdout` as a 16-bit signed single channel audio stream at 48k samples per second.
+If the stream contains _bit error rate test_ (BERT) pseudo-random data instead of voice,
+the data is checked and the results displayed.
 
 Some diagnostic information is written to `stderr` while the demodulator is
 running.
@@ -15,6 +17,33 @@ running.
 This program reads in an 48k sample per second, 16-bit signed integer, 1 channel raw audio
 stream from `stdin` (or generates BERT data itself) and writes out an Opulent Voice 4-FSK
 baseband stream at 187k samples per second, 16-bit signed integer, 1 channel to `stdout`.
+
+It can also skip the modulation and output a bitstream of symbols, packed four per byte.
+This can be useful for simulation, or if the modulation is being performed separately.
+In this mode, the bitstream can optionally be sent to a UDP network port instead of
+to `stdout`.
+
+The input can also be generated pseudo-randomly in _bit error rate test_ (BERT) mode
+instead of from voice audio. 
+
+## About the Frame Format
+
+This version of opv-mod and opv-demod implements a simplified version of the frame
+format, used for initial testing. In this version, the voice payload is simply two
+20ms Opus frames concatenated. The two Opus frames are not combined into a proper
+Opus packet, or wrapped in any additional protocol layers.
+
+Each frame starts with a frame header, which contains a source callsign (encoded),
+an authentication token (dummied out), and a flag indicating whether the frame
+contains voice data or BERT data. This header is followed by the voice data or
+by BERT data.
+
+Each transmission begins with a special preamble frame and ends with a special
+partial frame indicating _end of transmission_ (EOT). This version of opv_mod
+makes a single transmission that starts when the program is run and ends when the
+input stream ends, at which time the program also exits. This version of opv_demod
+can handle multiple transmissions, but doesn't do anything with the EOT. It exits
+when the input stream of baseband samples ends.
 
 ## Build
 
@@ -43,8 +72,10 @@ It also requires a modern C++17 compiler (GCC 8 minimum).
 
 ## Running opv-demod on the air
 
-This program was designed to be used with RTL-SDR, specifically rtl-fm.
-This is untested at this time.
+The opv_demod program was designed to be used with RTL-SDR, specifically rtl-fm.
+This works but is not fully documented at this time. The command line below
+should be a good start.
+
 ```
     rtl_fm -E offset -f 905.05M -s 187k | opv-demod | play -b 16 -r 48000 -c1 -t s16 -
 ```
@@ -52,29 +83,36 @@ This is untested at this time.
 You should run this in a terminal window that is 132 characters wide. It
 will output diagnostic information on a single line in the window.
 
-## Streaming opv-mod to opv-demod for testing
+## Streaming opv-mod samples directly to opv-demod for testing
 
     sox ~/audio/brain.wav -t raw - | opv-mod -S KB5MU | opv-demod -d | play -q -b 16 -r 48000 -c1 -t s16 -
 
 The input audio stream must be 1 channel, 16-bit signed integer, 48000 samples per second.
 
-Use `-S <callsign>` to set your source (callsign).
+Use `-S <callsign>` to set your source (callsign), which is mandatory.
 
-Use `-b` to output a bitstream rather than baseband.
+Do not use `-b` to output a bitstream, since opv_demod only accepts baseband samples.
 
 Use `-h` to see the full help.
 
-The output of the modulator is 187ksps, 16-bit signed integer, 1 channel raw audio.
+The output of the modulator is 187ksps, 16-bit signed integer, 1 channel raw samples.
+
+## Recording a Bitstream File
 
 To output a bitstream file:
 ```
     sox ~/audio/brain.wav -t raw - | ./opv-mod -S KB5MU -b > opv.bin
 ```
 
-This bitstream file can **probably** be fed into a modified version of 
-[m17-gnuradio](https://github.com/mobilinkd/m17-gnuradio) to
-transmit Opulent Voice using a PlutoSDR (or any SDR with an appropriate GNU Radio sink), or loaded into
-a vector signal generator such as an ESG-D Series signal generator. This has not yet been tested.
+The -b flag tells opv-mod to output a bitstream of the unmodulated symbols.
+
+This bitstream file can be fed into a modified version of 
+[m17-gnuradio](https://github.com/mobilinkd/m17-gnuradio) such as the `M17_Impaired.grc`
+flowgraph to transmit (simplified) Opulent Voice using a PlutoSDR (or any SDR with an
+appropriate GNU Radio sink), or perhaps loaded into a vector signal generator such as
+an ESG-D Series signal generator.
+
+## Creating Suitable Input Audio
 
 To show off the voice quality of Opulent Voice to best effect, start with clean, high-quality
 audio recordings. Make your own, or download something from the internet. You'll probably end up
@@ -84,6 +122,7 @@ raw audio stream and fed to the modulator with a command line like this:
 ```
     ffmpeg -i somefile.mp3 -ar 48000 -ac 1 -f s16le -acodec pcm_s16le - | opv-mod -b -S W5NYV > somefile.bin
 ```
+
 This can then be used with the the `M17_Impaired.grc` GNU Radio flow graph.
 
 ### Command Line Options
