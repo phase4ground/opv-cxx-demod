@@ -15,12 +15,19 @@ namespace mobilinkd
     const int audio_samples_per_opv_frame = audio_sample_rate * 0.04;  // PCM samples per audio frame (two codec frames)
     const int audio_bytes_per_opv_frame = audio_samples_per_opv_frame * 2;  // 2 bytes per PCM sample
 
-    // Simplified Frame Format for OPUlent Voice
+    // (converting to) COBS/RDP/UDP/IP Frame Format for OPUlent Voice
     const int fheader_size_bytes = 12;        // bytes in a frame header (multiple of 3 for Golay encoding)
     const int encoded_fheader_size = fheader_size_bytes * 8 * 2;    // bits in an encoded frame header
 
     const int opus_frame_size_bytes = 40;   // bytes in an encoded 20ms Opus frame
-    const int stream_frame_payload_bytes = 2 * opus_frame_size_bytes;  // All frames carry this much type1 payload data
+    const int opus_packet_size_bytes = 1 + 2 * opus_frame_size_bytes;   // one byte of overhead for Opus packet
+    const int rtp_header_bytes = 12;
+    const int udp_header_bytes = 8;
+    const int ip_header_bytes = 20;
+    const int cobs_overhead_bytes = 1;
+    const int total_protocol_bytes = rtp_header_bytes + udp_header_bytes + ip_header_bytes + cobs_overhead_bytes;
+
+    const int stream_frame_payload_bytes = total_protocol_bytes + opus_packet_size_bytes;   // All frames carry this much type1 payload data
     const int stream_frame_payload_size = 8 * stream_frame_payload_bytes;
     const int stream_frame_type1_size = stream_frame_payload_size + 4;  // add encoder tail bits
     const int stream_type2_payload_size = 2 * stream_frame_type1_size;  // Encoding type1 to type2 doubles the size, plus encoder tail
@@ -32,7 +39,7 @@ namespace mobilinkd
     const int baseband_frame_packed_bytes = baseband_frame_symbols / 4;  // packed bytes in sync_payload in a frame
     
     const int bert_frame_total_size = stream_frame_payload_size;
-    const int bert_frame_prime_size = 631;      // largest prime smaller than bert_frame_total_size
+    const int bert_frame_prime_size = 971;      // largest prime smaller than bert_frame_total_size
 
     const int symbol_rate = baseband_frame_symbols / 0.04;  // symbols per second
     const int sample_rate = symbol_rate * 10;               // sample rate
@@ -54,6 +61,10 @@ namespace mobilinkd
     static_assert(bert_frame_prime_size % 37 != 0, "BERT prime size not prime");
     static_assert(bert_frame_prime_size % 41 != 0, "BERT prime size not prime");
 
-    const int PolynomialInterleaverX = 177;
-    const int PolynomialInterleaverX2 = 370;
+    // This interleaver polynomial was chosen by brute force search (see MATLAB
+    // live script OpulentVoiceNumerology.mlx) and has a minimum distance of
+    // 271 bits over a frame of 2152 bits (stream_type4_size).
+    // THIS MIGHT NOT BE THE RIGHT CRITERION AND THIS POLYNOMIAL IS SUBJECT TO CHANGE.
+    const int PolynomialInterleaverX = 267;
+    const int PolynomialInterleaverX2 = 538;
 }

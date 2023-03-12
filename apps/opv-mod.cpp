@@ -11,6 +11,7 @@
 #include "Golay24.h"
 #include "OPVFrameHeader.h"
 #include "UDPNetwork.h"
+#include "cobs.h"
 
 #include "Numerology.h"
 #include <opus/opus.h>
@@ -36,7 +37,7 @@ const auto rrc_taps = std::array<double, 150>{
     0.0029364388513841593, 0.0031468394550958484, 0.002699564567597445, 0.001661182944400927, 0.00023319405581230247, -0.0012851320781224025, -0.0025577136087664687, -0.0032843366522956313, -0.0032697038088887226, -0.0024733964729590865, -0.0010285696910973807, 0.0007766690889758685, 0.002553421969211845, 0.0038920145144327816, 0.004451886520053017, 0.00404219185231544, 0.002674727068399207, 0.0005756567993179152, -0.0018493784971116507, -0.004092346891623224, -0.005648131453822014, -0.006126925416243605, -0.005349511529163396, -0.003403189203405097, -0.0006430502751187517, 0.002365929161655135, 0.004957956568090113, 0.006506845894531803, 0.006569574194782443, 0.0050017573119839134, 0.002017321931508163, -0.0018256054303579805, -0.00571615173291049, -0.008746639552588416, -0.010105075751866371, -0.009265784007800534, -0.006136551625729697, -0.001125978562075172, 0.004891777252042491, 0.01071805138282269, 0.01505751553351295, 0.01679337935001369, 0.015256245142156299, 0.01042830577908502, 0.003031522725559901, -0.0055333532968188165, -0.013403099825723372, -0.018598682349642525, -0.01944761739590459, -0.015005271935951746, -0.0053887880354343935, 0.008056525910253532, 0.022816244158307273, 0.035513467692208076, 0.04244131815783876, 0.04025481153629372, 0.02671818654865632, 0.0013810216516704976, -0.03394615682795165, -0.07502635967975885, -0.11540977897637611, -0.14703962203941534, -0.16119995609538576, -0.14969512896336504, -0.10610329539459686, -0.026921412469634916, 0.08757875030779196, 0.23293327870303457, 0.4006012210123992, 0.5786324696325503, 0.7528286479934068, 0.908262741447522, 1.0309661131633199, 1.1095611856548013, 1.1366197723675815, 1.1095611856548013, 1.0309661131633199, 0.908262741447522, 0.7528286479934068, 0.5786324696325503, 0.4006012210123992, 0.23293327870303457, 0.08757875030779196, -0.026921412469634916, -0.10610329539459686, -0.14969512896336504, -0.16119995609538576, -0.14703962203941534, -0.11540977897637611, -0.07502635967975885, -0.03394615682795165, 0.0013810216516704976, 0.02671818654865632, 0.04025481153629372, 0.04244131815783876, 0.035513467692208076, 0.022816244158307273, 0.008056525910253532, -0.0053887880354343935, -0.015005271935951746, -0.01944761739590459, -0.018598682349642525, -0.013403099825723372, -0.0055333532968188165, 0.003031522725559901, 0.01042830577908502, 0.015256245142156299, 0.01679337935001369, 0.01505751553351295, 0.01071805138282269, 0.004891777252042491, -0.001125978562075172, -0.006136551625729697, -0.009265784007800534, -0.010105075751866371, -0.008746639552588416, -0.00571615173291049, -0.0018256054303579805, 0.002017321931508163, 0.0050017573119839134, 0.006569574194782443, 0.006506845894531803, 0.004957956568090113, 0.002365929161655135, -0.0006430502751187517, -0.003403189203405097, -0.005349511529163396, -0.006126925416243605, -0.005648131453822014, -0.004092346891623224, -0.0018493784971116507, 0.0005756567993179152, 0.002674727068399207, 0.00404219185231544, 0.004451886520053017, 0.0038920145144327816, 0.002553421969211845, 0.0007766690889758685, -0.0010285696910973807, -0.0024733964729590865, -0.0032697038088887226, -0.0032843366522956313, -0.0025577136087664687, -0.0012851320781224025, 0.00023319405581230247, 0.001661182944400927, 0.002699564567597445, 0.0031468394550958484, 0.0029364388513841593, 0.0
 };
 
-const char VERSION[] = "0.1";
+const char VERSION[] = "0.2";
 
 using namespace mobilinkd;
 
@@ -380,26 +381,89 @@ using stream_frame_t = std::array<uint8_t, stream_frame_payload_bytes>; // a str
 using type3_data_frame_t = std::array<uint8_t, stream_type3_payload_size>;  // a stream frame of type3 bits
 
 
-// Create the payload for a voice frame, which is made up of two codec frames.
-// Caller must ensure that the audio is padded with 0s if the incoming data is incomplete.
-stream_frame_t fill_voice_frame(OpusEncoder *opus_encoder, const audio_frame_t& audio)
+// Convert 40ms of audio samples into an Opus packet containing two 20-ms Opus frames.
+opus_int32 build_opus_packet(OpusEncoder *opus_encoder, const audio_frame_t& audio, uint8_t* frame_buffer)
 {
-    stream_frame_t result;
-    opus_int32 count;
 
-    count  = opus_encode(opus_encoder,
-                        const_cast<int16_t*>(&audio[0]), audio_samples_per_opus_frame,
-                        &result[0], opus_frame_size_bytes);
+    // TOC Byte from RFC6716 Table 2:
+    //   config = 15 (01111), hybrid mode, full band, 20ms frames
+    //   s = 0, single channel (mono) mode
+    //   code = 01 (two frames with equal compressed size)
+    // ==>
+    //   0b01111001 = 0x79
+    uint8_t toc_byte = 0x79;
+
+    frame_buffer[0] = toc_byte;
+    opus_int32 count = 1;
+
     count += opus_encode(opus_encoder,
-                        const_cast<int16_t*>(&audio[audio_samples_per_opus_frame]), audio_samples_per_opus_frame,
-                        &result[opus_frame_size_bytes], opus_frame_size_bytes);
+                        const_cast<int16_t*>(&audio[0]),
+                        audio_samples_per_opus_frame,
+                        &frame_buffer[count],
+                        opus_frame_size_bytes
+                        );
+    count += opus_encode(opus_encoder,
+                        const_cast<int16_t*>(&audio[audio_samples_per_opus_frame]),
+                        audio_samples_per_opus_frame,
+                        &frame_buffer[count],
+                        opus_frame_size_bytes
+                        );
 
-    if (count != stream_frame_payload_bytes)
+    if (count != opus_packet_size_bytes)
     {
         std::cerr << "Got unexpected encoded voice size" << count;
     }
 
-    return result;
+    return count;
+}
+
+
+// Fill in the minimal 12-byte RTP header
+void build_rtp_header(uint8_t* frame_buffer)
+{
+    //!!! leave it zeroes for now
+}
+
+// Fill in the 8-byte UDP header
+void build_udp_header(uint8_t* frame_buffer)
+{
+    // leave it zeroes for now
+}
+
+
+// Fill in the 20-byte IP header
+void build_ip_header(uint8_t* frame_buffer)
+{
+    // leave it zeroes for now
+}
+
+
+// COBS-encode the Opus+RTP+UDP+IP packet
+void cobs_encode_voice_frame(uint8_t* frame, uint8_t* cobs_frame)
+{
+    cobs_encode_result result;
+
+    result = cobs_encode(cobs_frame, stream_frame_payload_bytes, frame, stream_frame_payload_bytes - cobs_overhead_bytes);
+    if (result.out_len != stream_frame_payload_bytes || result.status != COBS_ENCODE_OK) {
+        fprintf(stderr, "Failure COBS encoding voice frame\n");
+    }
+}
+
+// Create the payload for a OPV-RPC frame, which contains a pair of 20ms Opus frames
+// combined into an Opus packet, wrapped in RTP, UDP, and IP, and then framed with COBS.
+stream_frame_t fill_voice_frame(OpusEncoder *opus_encoder, const audio_frame_t& audio)
+{
+    stream_frame_t frame;
+    stream_frame_t cobs_frame;
+
+    memset(&frame[0], 0, stream_frame_payload_bytes);
+    opus_int32 opus_packet_length = build_opus_packet(opus_encoder, audio, &frame[total_protocol_bytes]);
+    build_rtp_header(&frame[total_protocol_bytes - rtp_header_bytes]);
+    build_udp_header(&frame[total_protocol_bytes - rtp_header_bytes - udp_header_bytes]);
+    build_ip_header(&frame[total_protocol_bytes - rtp_header_bytes - udp_header_bytes - ip_header_bytes]);
+    cobs_encode_voice_frame(&frame[cobs_overhead_bytes], &cobs_frame[0]);
+
+    return cobs_frame;
 }
 
 

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.9)
 
 project(opvcxx
-    VERSION 0.1
+    VERSION 0.2
     DESCRIPTION "OPV Digital Voice modulation and demodulation"
-    LANGUAGES CXX)
+    LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -45,7 +45,7 @@ include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
     "${PROJECT_BINARY_DIR}/opvcxxConfigVersion.cmake"
-    VERSION 0.1
+    VERSION 0.2
     COMPATIBILITY AnyNewerVersion
     )
 
