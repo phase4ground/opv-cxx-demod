@@ -62,9 +62,9 @@ namespace mobilinkd
     static_assert(bert_frame_prime_size % 41 != 0, "BERT prime size not prime");
 
     // This interleaver polynomial was chosen by brute force search (see MATLAB
-    // live script OpulentVoiceNumerology.mlx) and has a minimum distance of
-    // 271 bits over a frame of 2152 bits (stream_type4_size).
-    // THIS MIGHT NOT BE THE RIGHT CRITERION AND THIS POLYNOMIAL IS SUBJECT TO CHANGE.
-    const int PolynomialInterleaverX = 267;
-    const int PolynomialInterleaverX2 = 538;
+    // live script OpulentVoiceNumerology.mlx) and has a "minimum interleaving distance"
+    // of 64 bits over a frame of 2152 bits (stream_type4_size). The theoretical
+    // upper bound is 65 bits.
+    const int PolynomialInterleaverX = 59;
+    const int PolynomialInterleaverX2 = 1076;
 }
