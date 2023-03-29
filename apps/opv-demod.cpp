@@ -1,6 +1,7 @@
 // Copyright 2020 Mobilinkd LLC.
 // Copyright 2022 Open Research Institute, Inc.
 
+#include "OPVCobsDecoder.h"
 #include "OPVDemodulator.h"
 #include "FirFilter.h"
 
@@ -19,18 +20,14 @@
 #include <iostream>
 #include <vector>
 
-const char VERSION[] = "0.1";
+const char VERSION[] = "0.2";
 
 using namespace mobilinkd;
-
-bool invert_input = false;
-bool quiet = false;
-bool debug = false;
-bool noise_blanker = false;
 
 uint32_t debug_sample_count = 0;
 
 OpusDecoder* opus_decoder;
+OPVCobsDecoder cobs_decoder;
 
 PRBS9 prbs;
 
@@ -53,7 +50,7 @@ struct Config
             "Program options");
         desc.add_options()
             ("help,h", "Print this help message and exit.")
-            ("version,V", "Print the application verion and exit.")
+            ("version,V", "Print the application version and exit.")
             ("invert,i", po::bool_switch(&result.invert), "invert the received baseband")
             ("noise-blanker,b", po::bool_switch(&result.noise_blanker), "noise blanker -- silence likely corrupt audio")
             ("verbose,v", po::bool_switch(&result.verbose), "verbose output")
@@ -99,86 +96,53 @@ struct Config
 
 std::optional<Config> config;
 
-
-bool demodulate_audio(OPVFrameDecoder::stream_type1_bytes_t const& audio, int viterbi_cost)
+#ifdef THISNEEDSTOBEUPDATED
+bool demodulate_audio(OPVFrameDecoder::stream_type1_opv_packet_bytes_t const& vocoded_audio, int viterbi_cost)
 {
-    bool result = true;
-    std::array<int16_t, audio_samples_per_opus_frame> buf;
+    std::array<int16_t, audio_samples_per_opv_frame> buf;
     opus_int32 count;
 
-    if (noise_blanker && viterbi_cost > 80)
+    if (viterbi_cost > 80)
     {
-        if (config->verbose)
+        count = opus_decode(opus_decoder, NULL, opus_packet_size_bytes, buf.data(), audio_samples_per_opv_frame, 0);
+
+        if (config->noise_blanker)
         {
-            std::cerr << "Frameout blanked" << std::endl;
+            buf.fill(0);
         }
-
-        buf.fill(0);
-        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
-        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
-    }
-    else if (viterbi_cost > 80)
-    {
-        if (config->verbose)
-        {
-            std::cerr << "Frameout nulled" << std::endl;
-        }
-
-        count = opus_decode(opus_decoder, NULL, opus_frame_size_bytes, buf.data(), audio_samples_per_opus_frame, 0);
-        // if (count != audio_samples_per_opus_frame && config->verbose)
-        // {
-        //     std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
-        // }
-        // else if (config->verbose)
-        // {
-        //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
-        // }
-        // std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
-
-       count = opus_decode(opus_decoder, NULL, opus_frame_size_bytes, buf.data(), audio_samples_per_opus_frame, 0);
-        // if (count != audio_samples_per_opus_frame && config->verbose)
-        // {
-        //     std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
-        // }
-        // else if (config->verbose)
-        // {
-        //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
-        // }
-        // std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
     }
     else
     {
-        if (config->verbose)
-        {
-            std::cerr << "Frameout normal" << std::endl;
-        }
-
-        count = opus_decode(opus_decoder, audio.data(), opus_frame_size_bytes, buf.data(), audio_samples_per_opus_frame, 0);
-        // if (count != audio_samples_per_opus_frame && config->verbose)
-        // {
-        //     std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
-        // }
-        // else if (config->verbose)
-        // {
-        //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
-        // }
-        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
-
-       count = opus_decode(opus_decoder, audio.data() + opus_frame_size_bytes, opus_frame_size_bytes, buf.data(), audio_samples_per_opus_frame, 0);
-        // if (count != audio_samples_per_opus_frame && config->verbose)
-        // {
-        //     std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opus_frame << std::endl;
-        // }
-        // else if (config->verbose)
-        // {
-        //     std::cerr << "Opus decode OK, " << count << " samples" << std::endl;
-        // }
-        std::cout.write((const char*)buf.data(), audio_bytes_per_opus_frame);
+        count = opus_decode(opus_decoder, vocoded_audio.data(), opus_packet_size_bytes, buf.data(), audio_samples_per_opv_frame, 0);
     }
 
-    return result;
-}
+    std::cout.write((const char*)buf.data(), audio_bytes_per_opv_frame);
 
+    if (config->verbose)
+    {
+        if (config->noise_blanker && viterbi_cost > 80)
+        {
+            std::cerr << "Frameout blanked" << std::endl;
+        }
+        else if (viterbi_cost > 80)
+        {
+            std::cerr << "Frameout nulled" << std::endl;
+        }
+        else
+        {
+            std::cerr << "Frameout normal" << std:: endl;
+        }
+
+        if (count != audio_samples_per_opv_frame)
+        {
+            std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opv_frame << std::endl;
+        }
+
+    }
+
+    return true;
+}
+#endif
 
 bool decode_bert(OPVFrameDecoder::stream_type1_bytes_t const& bert_data)
 {
@@ -209,10 +173,10 @@ bool handle_frame(OPVFrameDecoder::output_buffer_t const& frame, int viterbi_cos
 
     switch (frame.type)
     {
-        case FrameType::OPVOICE:
-            result = demodulate_audio(frame.data, viterbi_cost);
+        case FrameType::OPV_COBS:
+            cobs_decoder(frame.data.data(), stream_frame_payload_bytes);
             break;
-        case FrameType::OPBERT:
+        case FrameType::OPV_BERT:
             result = decode_bert(frame.data);
             break;
     }
@@ -224,8 +188,8 @@ template <typename FloatType>
 void diagnostic_callback(bool dcd, FloatType evm, FloatType deviation, FloatType offset, bool locked,
     FloatType clock, int sample_index, int sync_index, int clock_index, int viterbi_cost)
 {
-    if (debug) {
-        std::cerr << "\ndcd: " << std::setw(1) << int(dcd)
+    if (config->debug) {
+        std::cerr << "dcd: " << std::setw(1) << int(dcd)
             << ", evm: " << std::setfill(' ') << std::setprecision(4) << std::setw(8) << evm * 100 <<"%"
             << ", deviation: " << std::setprecision(4) << std::setw(8) << deviation
             << ", freq offset: " << std::setprecision(4) << std::setw(8) << offset
@@ -233,15 +197,17 @@ void diagnostic_callback(bool dcd, FloatType evm, FloatType deviation, FloatType
             << ", clock: " << std::setprecision(7) << std::setw(8) << clock
             << ", sample: " << std::setw(1) << sample_index << ", "  << sync_index << ", " << clock_index
             << ", cost: " << viterbi_cost
-            << " at sample " << debug_sample_count;
+            << " at sample " << debug_sample_count
+            << " (" << float(debug_sample_count)/samples_per_frame << " frames)"
+            << std::endl;
     }
         
     if (!dcd && prbs.sync()) { // Seems like there should be a better way to do this.
         prbs.reset();
     }
 
-    if (prbs.sync() && !quiet) {
-        if (!debug) {
+    if (prbs.sync() && !config->quiet) {
+        if (!config->debug) {
             std::cerr << '\r';
         } else {
             std::cerr << ", ";
@@ -261,13 +227,14 @@ int main(int argc, char* argv[])
     config = Config::parse(argc, argv);
     if (!config) return 0;
 
-    invert_input = config->invert;
-    quiet = config->quiet;
-    debug = config->debug;
-    noise_blanker = config->noise_blanker;
     int opus_decoder_err;    // return code from Opus function calls
 
     opus_decoder = ::opus_decoder_create(audio_sample_rate, 1, &opus_decoder_err);
+    if (opus_decoder_err != OPUS_OK)
+    {
+        std::cerr << "Failed to create Opus decoder" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     using FloatType = float;
 
@@ -279,7 +246,7 @@ int main(int argc, char* argv[])
     {
         int16_t sample;
         std::cin.read(reinterpret_cast<char*>(&sample), 2);
-        if (invert_input) sample *= -1;
+        if (config->invert) sample *= -1;
         demod(sample / 44000.0);
         debug_sample_count++;
     }

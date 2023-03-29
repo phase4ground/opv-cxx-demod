@@ -106,7 +106,7 @@ public:
 		if (max_count_ < 2 || min_count_ < 2) return;
 		FloatType max_ = max_est_ / max_count_;
 		FloatType min_ = min_est_ / min_count_;
-		deviation_ = (max_ - min_) / 6.0;
+		deviation_ = (max_ - min_) / 6.0;	// 6.0 is the difference between -3 and +3 symbols
 		offset_ =  dc_filter_(std::max(std::min(max_ + min_, deviation_ * MAX_DC_ERROR), deviation_ * -MAX_DC_ERROR));
 		error_ = (std::sqrt(max_var_ / (max_count_ - 1)) + std::sqrt(min_var_ / (min_count_ - 1))) * 0.5;
 		if (deviation_ > 0) idev_ = 1.0 / deviation_;

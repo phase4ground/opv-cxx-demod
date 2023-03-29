@@ -480,16 +480,16 @@ type3_data_frame_t encode_stream_frame(const stream_frame_t& payload)
             uint32_t x = (b & 0x80) >> 7;
             b <<= 1;
             memory = update_memory<4>(memory, x);
-            encoded[index++] = convolve_bit(031, memory);
-            encoded[index++] = convolve_bit(027, memory);
+            encoded[index++] = convolve_bit(ConvolutionPolyA, memory);
+            encoded[index++] = convolve_bit(ConvolutionPolyB, memory);
         }
     }
     // Flush the encoder.
     for (size_t i = 0; i != 4; ++i)
     {
         memory = update_memory<4>(memory, 0);
-        encoded[index++] = convolve_bit(031, memory);
-        encoded[index++] = convolve_bit(027, memory);
+        encoded[index++] = convolve_bit(ConvolutionPolyA, memory);
+        encoded[index++] = convolve_bit(ConvolutionPolyB, memory);
     }
 
     return encoded;

@@ -1,5 +1,6 @@
 #include "Trellis.h"
 #include "Util.h"
+#include "Numerology.h"
 
 #include <gtest/gtest.h>
 
@@ -38,8 +39,8 @@ TEST_F(TrellisTest, toBitArray)
 
 TEST_F(TrellisTest, construct)
 {
-    auto trellis = mobilinkd::makeTrellis<4, 2>({031,027});
+    auto trellis = mobilinkd::makeTrellis<4, 2>({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
 
     ASSERT_EQ(trellis.polynomials.size(), 2);
-    EXPECT_EQ(trellis.polynomials[1], 027);
+    EXPECT_EQ(trellis.polynomials[1], mobilinkd::ConvolutionPolyB);
 }

@@ -9,6 +9,7 @@
 #include "Viterbi.h"
 #include "OPVFrameHeader.h"
 #include "Golay24.h"
+#include "Numerology.h"
 
 #include <algorithm>
 #include <array>
@@ -24,13 +25,13 @@ struct OPVFrameDecoder
 {
 
     OPVRandomizer<stream_type4_size> derandomize_;
-    PolynomialInterleaver<177, 370, stream_type4_size> interleaver_;
-    Trellis<4,2> trellis_{makeTrellis<4, 2>({031,027})};
+    PolynomialInterleaver<PolynomialInterleaverX, PolynomialInterleaverX2, stream_type4_size> interleaver_;
+    Trellis<4,2> trellis_{makeTrellis<4, 2>({ConvolutionPolyA,ConvolutionPolyB})};
     Viterbi<decltype(trellis_), 4> viterbi_{trellis_};
  
     enum class State { ACQ, STREAM };
     enum class DecodeResult { FAIL, OK, EOS };
-    enum class FrameType { OPVOICE, OPBERT };
+    enum class FrameType { OPV_COBS, OPV_BERT };
 
     State state_ = State::ACQ;      // we're looking to acquire frame sync
 
@@ -85,7 +86,7 @@ struct OPVFrameDecoder
             state_ = State::ACQ;
         }
 
-        output_buffer.type = (fheader.flags & OPVFrameHeader::BERT_MODE) ? FrameType::OPBERT : FrameType::OPVOICE;
+        output_buffer.type = (fheader.flags & OPVFrameHeader::BERT_MODE) ? FrameType::OPV_BERT : FrameType::OPV_COBS;
         callback_(output_buffer, viterbi_cost);
 
         return (fheader.flags & OPVFrameHeader::LAST_FRAME) ? DecodeResult::EOS : DecodeResult::OK;

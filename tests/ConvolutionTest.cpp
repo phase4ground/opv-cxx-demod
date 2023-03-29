@@ -1,5 +1,6 @@
 #include "Convolution.h"
 #include "Util.h"
+#include "Numerology.h"
 
 #include <gtest/gtest.h>
 
@@ -24,12 +25,12 @@ TEST_F(ConvolutionTest, convolve)
     constexpr size_t K = 4;
 
     auto memory = mobilinkd::update_memory<K>(0, 0);
-    EXPECT_EQ(mobilinkd::convolve_bit(031, memory), 0);
-    EXPECT_EQ(mobilinkd::convolve_bit(027, memory), 0);
+    EXPECT_EQ(mobilinkd::convolve_bit(mobilinkd::ConvolutionPolyA, memory), 0);
+    EXPECT_EQ(mobilinkd::convolve_bit(mobilinkd::ConvolutionPolyB, memory), 0);
 
     memory = mobilinkd::update_memory<K>(0, 1);
-    EXPECT_EQ(mobilinkd::convolve_bit(031, memory), 1);
-    EXPECT_EQ(mobilinkd::convolve_bit(027, memory), 1);   
+    EXPECT_EQ(mobilinkd::convolve_bit(mobilinkd::ConvolutionPolyA, memory), 1);
+    EXPECT_EQ(mobilinkd::convolve_bit(mobilinkd::ConvolutionPolyB, memory), 1);   
 }
 
 TEST_F(ConvolutionTest, convolve_bit)
@@ -45,16 +46,16 @@ TEST_F(ConvolutionTest, convolve_bit)
     for (auto x : input)
     {
         memory = mobilinkd::update_memory<K>(memory, x);
-        encoded[index++] = mobilinkd::convolve_bit(031, memory);
-        encoded[index++] = mobilinkd::convolve_bit(027, memory);
+        encoded[index++] = mobilinkd::convolve_bit(mobilinkd::ConvolutionPolyA, memory);
+        encoded[index++] = mobilinkd::convolve_bit(mobilinkd::ConvolutionPolyB, memory);
     }
 
     // Flush
     for (size_t i = 0; i != K; ++i)
     {
         memory = mobilinkd::update_memory<K>(memory, 0);
-        encoded[index++] = mobilinkd::convolve_bit(031, memory);
-        encoded[index++] = mobilinkd::convolve_bit(027, memory);
+        encoded[index++] = mobilinkd::convolve_bit(mobilinkd::ConvolutionPolyA, memory);
+        encoded[index++] = mobilinkd::convolve_bit(mobilinkd::ConvolutionPolyB, memory);
     }
     
     std::cout << std::endl;

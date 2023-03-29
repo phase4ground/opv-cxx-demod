@@ -149,7 +149,12 @@ struct OPVDemodulator
 	enum class DemodState { UNLOCKED, FIRST_SYNC, STREAM_SYNC, FRAME };
 
 	BaseFirFilter<FloatType, detail::Taps<FloatType>::rrc_taps.size()> demod_filter{detail::Taps<FloatType>::rrc_taps};
-	DataCarrierDetect<FloatType, sample_rate, 500> dcd{10000, 15500, 1.0, 4.0};	//!!! may need to revise these values
+	DataCarrierDetect<FloatType, sample_rate, 500> dcd{13500, 21500, 1.0, 4.0};	//!!! may need to revise these values
+	//!!! I think this is half the sample rate, rounded off to 500 Hz bins,
+	//!!! and 1.6 times that, again rounded off to 500 Hz bins. The first frequency
+	//!!! should respond strongly if there's anything modulated at the symbol rate,
+	//!!! especially so if it's the preamble (alternating +3 and -3).
+	
 	ClockRecovery<FloatType, sample_rate, symbol_rate> clock_recovery;
 
 	correlator_t correlator;
@@ -240,7 +245,7 @@ void OPVDemodulator<FloatType>::dcd_off()
 	// Just lost data carrier.
 	dcd_ = false;
 	demodState = DemodState::UNLOCKED;
-	std::cerr << "DCD lost at sample " << debug_sample_count << std::endl;	//!!! debug
+	std::cerr << "DCD lost at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl;	//!!! debug
 }
 
 template <typename FloatType>
@@ -277,7 +282,7 @@ void OPVDemodulator<FloatType>::do_unlocked()
 		auto sync_updated = preamble_sync.updated();
 		if (sync_updated)
 		{
-			// std::cerr << "\nDetected preamble at sample " << debug_sample_count << std::endl;	//!!! debug
+			std::cerr << "\nDetected preamble at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl;	//!!! debug
 			sync_count = 0;
 			missing_sync_count = 0;
 			need_clock_reset_ = true;
@@ -294,7 +299,7 @@ void OPVDemodulator<FloatType>::do_unlocked()
 	auto sync_updated = stream_sync.updated();
 	if (sync_updated)
 	{
-		std::cerr << "Stream sync detected while unlocked at sample " << debug_sample_count << std::endl; //!!! debug
+		std::cerr << "Stream sync detected while unlocked at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl; //!!! debug
 
 		sync_count = 0;
 		missing_sync_count = 0;
@@ -337,7 +342,7 @@ void OPVDemodulator<FloatType>::do_first_sync()
 	if (sync_triggered > CORRELATION_NEAR_ZERO)
 	{
 		// Found the STREAM syncword. Now we have frame timing and can process frames.
-		std::cerr << "\nDetected first STREAM sync word at sample " << debug_sample_count << std::endl; //!!! debug
+		std::cerr << "Detected first STREAM sync word at sample " << debug_sample_count  << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl; //!!! debug
 		missing_sync_count = 0;
 		need_clock_update_ = true;
 		update_values(sample_index);
@@ -353,7 +358,7 @@ void OPVDemodulator<FloatType>::do_first_sync()
 		//!!! It might be better to keep a symbol timing tracking loop running all the time.
 		if (++missing_sync_count > baseband_frame_symbols)
 		{
-			std::cerr << "FAILED to find first syncword by sample " << debug_sample_count << std::endl;	//!! debug
+			std::cerr << "FAILED to find first syncword by sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl;	//!! debug
 			demodState = DemodState::UNLOCKED;
 			missing_sync_count = 0;
 		}
@@ -388,8 +393,8 @@ void OPVDemodulator<FloatType>::do_stream_sync()
 		missing_sync_count = 0;
 		if (sync_count > 70)	// sample 71 is the first that's nominally in the last symbol of the sync word
 		{
-			// std::cerr << "\nDetected STREAM sync word at sample " << debug_sample_count << std::endl; //!!! debug
-			std::cerr << ".";
+			std::cerr << "Detected STREAM sync word at sample " << debug_sample_count  << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl; //!!! debug
+			// std::cerr << ".";
 			update_values(sync_index);
 			demodState = DemodState::FRAME;
 		}
@@ -401,14 +406,14 @@ void OPVDemodulator<FloatType>::do_stream_sync()
 		missing_sync_count += 1;
 		if (missing_sync_count < MAX_MISSING_SYNC)
 		{
-			// std::cerr << "\nFaking a STREAM sync word " << missing_sync_count << " at sample " << debug_sample_count << std::endl; //!!! debug
-			std::cerr << "!";
+			std::cerr << "Faking a STREAM sync word " << missing_sync_count << " at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl; //!!! debug
+			// std::cerr << "!";
 			demodState = DemodState::FRAME;
 		}
 		else
 		{
-			// std::cerr << "\nDone faking sync words at sample " << debug_sample_count << std::endl;	//!! debug
-			std::cerr << "X";
+			std::cerr << "Done faking sync words at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl;	//!! debug
+			// std::cerr << "X";
 			// fputs("\n!SYNC\n", stderr);
 			demodState = DemodState::FIRST_SYNC;
 		}
@@ -456,7 +461,7 @@ void OPVDemodulator<FloatType>::do_frame(FloatType filtered_sample)
 
 		if (cost_count > 75)
 		{
-			std::cerr << "Viterbi cost high too long at sample " << debug_sample_count << std::endl;	//!!! debug
+			std::cerr << "Viterbi cost high too long at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl;	//!!! debug
 			cost_count = 0;
 			demodState = DemodState::UNLOCKED;
 			// fputs("\nCOST\n", stderr);
@@ -468,7 +473,7 @@ void OPVDemodulator<FloatType>::do_frame(FloatType filtered_sample)
 		switch (frame_decode_result)
 		{
 		case OPVFrameDecoder::DecodeResult::EOS:
-			std::cerr << "EOS at sample " << debug_sample_count << std::endl;	//!!! debug
+			std::cerr << "EOS at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl;	//!!! debug
 			//!!! EOS is just a hint to upper layers; here's where we'd pass it up somehow.
 
 			// It's OK for a new stream to start immediately without a new preamble.
@@ -504,7 +509,7 @@ void OPVDemodulator<FloatType>::operator()(const FloatType input)
 		return;
 	}
 
-	if (! initialized) std::cerr << "Initialize complete at sample " << debug_sample_count << std::endl;	//!!! debug
+	if (! initialized) std::cerr << "Initialize complete at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl;	//!!! debug
 	initialized = true;//!!! debug
 
 	if (!dcd_)

@@ -73,7 +73,7 @@ struct Correlator
     size_t index() const {return prev_buffer_pos_ % SAMPLES_PER_SYMBOL;}
 
     /**
-     * Get the average outer symbol levels at a given index.  This makes trhee
+     * Get the average outer symbol levels at a given index.  This makes three
      * assumptions.
      *
      *  1. The max symbol value is above 0 and the min symbol value is below 0.
@@ -81,7 +81,7 @@ struct Correlator
      *  3. The index is a peak correlation index.
      *
      * The first should hold true except for extreme frequency errors.  The
-     * second holds true for the sync words used for M17.  The third will
+     * second holds true for the sync words used for M17 or OPV.  The third will
      * hold true if passed the timing index from a triggered sync word.
      */
     std::tuple<FloatType, FloatType> outer_symbol_levels(size_t sample_index)

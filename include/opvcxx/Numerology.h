@@ -67,4 +67,8 @@ namespace mobilinkd
     // upper bound is 65 bits.
     const int PolynomialInterleaverX = 59;
     const int PolynomialInterleaverX2 = 1076;
+
+    // This convolutional coder was adopted from M17.
+    const int ConvolutionPolyA = 031;   // octal representation of taps
+    const int ConvolutionPolyB = 027;   // octal representation of taps
 }

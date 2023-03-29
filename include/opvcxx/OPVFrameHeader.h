@@ -176,7 +176,7 @@ struct OPVFrameHeader
             received = ((efh[i+0] << 16) & 0xff0000) | ((efh[i+1] << 8) & 0x00ff00) | (efh[i+2] & 0x0000ff);
             if (! Golay24::decode(received, decoded))
             {
-                // std::cerr << "Golay decode fail, input " << std::hex << received << std::dec << " at sample " << debug_sample_count << std::endl; //!!! debug
+                std::cerr << "Golay decode fail, input " << std::hex << received << std::dec << " at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl; //!!! debug
                 return HeaderResult::FAIL;
             }
 //            std::cerr << "Golay " << std::hex << received << " decoded to " << decoded << std::dec << std::endl;    //!!! debug
@@ -235,7 +235,7 @@ struct OPVFrameHeader
         }
         else
         {
-            // std::cerr << "Frame header decoded, no changes" << std::endl;
+            std::cerr << "Frame header decoded, no changes" << std::endl;
         }
 
         return result;

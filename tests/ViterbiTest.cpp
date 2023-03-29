@@ -1,6 +1,7 @@
 #include "Viterbi.h"
 #include "Trellis.h"
 #include "Util.h"
+#include "Numerology.h"
 
 #include <gtest/gtest.h>
 
@@ -23,7 +24,7 @@ class ViterbiTest : public ::testing::Test {
 
 TEST_F(ViterbiTest, construct)
 {
-    mobilinkd::Trellis<4,2> trellis({031,027});
+    mobilinkd::Trellis<4,2> trellis({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
     mobilinkd::Viterbi<decltype(trellis)> viterbi(trellis);
 
 
@@ -31,7 +32,7 @@ TEST_F(ViterbiTest, construct)
 
 TEST_F(ViterbiTest, makeNextState)
 {
-    mobilinkd::Trellis<4,2> trellis({031,027});
+    mobilinkd::Trellis<4,2> trellis({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
     auto nextState{mobilinkd::makeNextState(trellis)};
     for (size_t i = 0; i != 16; ++i)
     {
@@ -43,7 +44,7 @@ TEST_F(ViterbiTest, makeNextState)
 
 TEST_F(ViterbiTest, makePrevState)
 {
-    mobilinkd::Trellis<4,2> trellis({031,027});
+    mobilinkd::Trellis<4,2> trellis({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
     auto prevStates{mobilinkd::makePrevState(trellis)};
     for (size_t i = 0; i != 16; ++i)
     {
@@ -56,10 +57,10 @@ TEST_F(ViterbiTest, makePrevState)
 
 TEST_F(ViterbiTest, makeCost)
 {
-    mobilinkd::Trellis<4,2> trellis({031,027});
+    mobilinkd::Trellis<4,2> trellis({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
 
-    ASSERT_EQ(trellis.polynomials[0], 031);
-    ASSERT_EQ(trellis.polynomials[1], 027);
+    ASSERT_EQ(trellis.polynomials[0], mobilinkd::ConvolutionPolyA);
+    ASSERT_EQ(trellis.polynomials[1], mobilinkd::ConvolutionPolyB);
 
     auto cost{mobilinkd::makeCost(trellis)};
     for (size_t i = 0; i != 16; ++i)
@@ -73,10 +74,10 @@ TEST_F(ViterbiTest, makeCost)
 
 TEST_F(ViterbiTest, makeCostLLR)
 {
-    mobilinkd::Trellis<4,2> trellis({031,027});
+    mobilinkd::Trellis<4,2> trellis({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
 
-    ASSERT_EQ(trellis.polynomials[0], 031);
-    ASSERT_EQ(trellis.polynomials[1], 027);
+    ASSERT_EQ(trellis.polynomials[0], mobilinkd::ConvolutionPolyA);
+    ASSERT_EQ(trellis.polynomials[1], mobilinkd::ConvolutionPolyB);
 
     auto cost{mobilinkd::makeCost<decltype(trellis), 4>(trellis)};
     for (size_t i = 0; i != 16; ++i)
@@ -100,7 +101,7 @@ TEST_F(ViterbiTest, decode)
         encoded[i] = encoded[i] * 2 - 1;
     }
 
-    mobilinkd::Trellis<4,2> trellis({031,027});
+    mobilinkd::Trellis<4,2> trellis({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
     mobilinkd::Viterbi<decltype(trellis)> viterbi(trellis);
     viterbi.decode(encoded, output);
 
@@ -138,7 +139,7 @@ TEST_F(ViterbiTest, decode_ber_1)
         encoded[i] = encoded[i] * 2 - 1;
     }
 
-    mobilinkd::Trellis<4,2> trellis({031,027});
+    mobilinkd::Trellis<4,2> trellis({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
     mobilinkd::Viterbi<decltype(trellis)> viterbi(trellis);
     auto ber = viterbi.decode(encoded,output);
     for (size_t i = 0; i != expected.size(); ++i) EXPECT_EQ(output[i], expected[i]);
@@ -159,7 +160,7 @@ TEST_F(ViterbiTest, decode_ber_llr)
         encoded[i] = encoded[i] * 14 - 7;
     }
 
-    mobilinkd::Trellis<4,2> trellis({031,027});
+    mobilinkd::Trellis<4,2> trellis({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
     mobilinkd::Viterbi<decltype(trellis), 4> viterbi(trellis);
     auto start = std::chrono::high_resolution_clock::now();
     auto ber = viterbi.decode(encoded, output);
@@ -183,7 +184,7 @@ TEST_F(ViterbiTest, decode_ber_lsf)
         encoded[i] = encoded[i] * 14 - 7;
     }
 
-    mobilinkd::Trellis<4,2> trellis({031,027});
+    mobilinkd::Trellis<4,2> trellis({mobilinkd::ConvolutionPolyA,mobilinkd::ConvolutionPolyB});
     mobilinkd::Viterbi<decltype(trellis), 4> viterbi(trellis);
     auto start = std::chrono::high_resolution_clock::now();
     auto ber = viterbi.decode(encoded, output);
