@@ -38,8 +38,13 @@ struct Correlator
     int code = -1;
 
     // IIR with Nyquist of 1/240.
-    static constexpr std::array<FloatType,3> b = {4.24433681e-05, 8.48867363e-05, 4.24433681e-05};
-    static constexpr std::array<FloatType,3> a = {1.0, -1.98148851,  0.98165828};
+	// I'm not sure what that means.
+	// This is a Butterworth IIR lowpass filter, as designed by MATLAB's filter designer set for minimal taps.
+	// The numerator (which is [1 2 1] in normal form) has the scaling factor incorporated for unity gain.
+	static constexpr FloatType ugsf = 1.341681875516310e-06;	// unity gain scale factor
+	static constexpr std::array<FloatType,3> b = {1.0 * ugsf, 2.0 * ugsf, 1.0 * ugsf};	//numerator
+    static constexpr std::array<FloatType,3> a = {1.0, -1.99672112253324, 0.996726489260742};	// denominator
+
     sample_filter_t sample_filter{b, a};
     std::array<int, SYMBOLS> tmp;
 
@@ -47,7 +52,7 @@ struct Correlator
     {
         limit_ = sample_filter(std::abs(value));
 
-//		std::cerr << "@ " << debug_sample_count << " filtered_sample = " << value << " limit = " << limit_ << std::endl;	//!!!debug
+		// std::cerr << "@ " << debug_sample_count << " filtered_sample = " << value << " limit = " << limit_ << std::endl;	//!!!debug
 
         buffer_[buffer_pos_] = value;
         prev_buffer_pos_ = buffer_pos_;
@@ -142,6 +147,8 @@ struct SyncWord
 		value_type limit_1 = correlator.limit() * magnitude_1_;
 		value_type limit_2 = correlator.limit() * magnitude_2_;
 		auto value = correlator.correlate(sync_word_);
+
+		// std::cerr << "@ " << debug_sample_count << " triggered() value = " << value << " limit1 limit2 = " << limit_1 << " " << limit_2 << std::endl;
 
 		return (value > limit_1 || value < limit_2) ? value : 0.0;
 	}

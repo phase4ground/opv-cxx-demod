@@ -247,7 +247,7 @@ int main(int argc, char* argv[])
         int16_t sample;
         std::cin.read(reinterpret_cast<char*>(&sample), 2);
         if (config->invert) sample *= -1;
-        demod(sample / 44000.0);
+        demod(sample / 44000.0);    // scale 16-bit sample to [-0.74472727,0.744704545] and process
         debug_sample_count++;
     }
 

@@ -446,7 +446,7 @@ void OPVDemodulator<FloatType>::do_frame(FloatType filtered_sample)
 	auto len = framer(llr_symbol, &framer_buffer_ptr);
 	if (len != 0)
 	{
-//		std::cerr << "Framer returned " << len << " at sample " << debug_sample_count << std::endl;
+		std::cerr << "Framer returned " << len << " at sample " << debug_sample_count << std::endl;
 		assert(len == stream_type4_size);
 
 		need_clock_update_ = true;

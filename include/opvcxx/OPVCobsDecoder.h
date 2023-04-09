@@ -32,6 +32,6 @@ struct OPVCobsDecoder
      */
     void operator()(const uint8_t * buffer, size_t buffer_length)
     {
-        std::cout << "Processing " << buffer_length << " COBS bytes" << std::endl;
+        std::cerr << "Processing " << buffer_length << " COBS bytes" << std::endl;
     }
 };
