@@ -478,7 +478,7 @@ void OPVDemodulator<FloatType>::do_frame(FloatType filtered_sample)
 
 			// It's OK for a new stream to start immediately without a new preamble.
 			//!!! should be quick to drop out of lock if we don't detect an immediately next frame
-			demodState = DemodState::STREAM_SYNC;
+			demodState = DemodState::FIRST_SYNC;
 			break;
 		case OPVFrameDecoder::DecodeResult::OK:
 			demodState = DemodState::STREAM_SYNC;	// Expect a new STREAM sync word next

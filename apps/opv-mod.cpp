@@ -811,7 +811,8 @@ int main(int argc, char* argv[])
         }
 
         std::cerr << "Output " << frame_count << " frames of BERT data." << std::endl;
-
+        
+        output_eot();
         send_dead_carrier();    // simulate loss of signal
     }
 
