@@ -39,6 +39,7 @@ TEST_F(PolynomialInterleaverTest, byte_bit_interleaver)
     }
 }
 
+#if 0   // test not valid for OPV
 TEST_F(PolynomialInterleaverTest, reinterleave)
 {
     std::array<uint8_t, stream_type4_bytes> dc;
@@ -51,6 +52,7 @@ TEST_F(PolynomialInterleaverTest, reinterleave)
         EXPECT_EQ(dc[i], mobilinkd::detail::DC[i]);
     }
 }
+#endif
 
 TEST_F(PolynomialInterleaverTest, deinterleave)
 {
