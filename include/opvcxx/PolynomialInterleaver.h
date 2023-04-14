@@ -25,7 +25,8 @@ struct PolynomialInterleaver
 
     size_t index(size_t i)
     {
-        return ((F1 * i) + (F2 * i * i)) % K;
+        return ((F1 * i) + ((uint64_t)F2 * i * i)) % K;
+        // 32-bit arithmetic is just a bit too small to handle F2*i*i for OPV.
     }
     
     void interleave(buffer_t& data)
