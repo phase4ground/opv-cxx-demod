@@ -71,4 +71,7 @@ namespace mobilinkd
     // This convolutional coder was adopted from M17.
     const int ConvolutionPolyA = 031;   // octal representation of taps
     const int ConvolutionPolyB = 027;   // octal representation of taps
+
+    // Parameters for data communication
+    const int ip_mtu = 1500;    // common Maximum Transmission Unit (MTU) value for Ethernet, in bytes
 }

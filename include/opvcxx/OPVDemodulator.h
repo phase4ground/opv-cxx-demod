@@ -8,6 +8,7 @@
 #include "DataCarrierDetect.h"
 #include "FirFilter.h"
 #include "FreqDevEstimator.h"
+#include "OPVCobsDecoder.h"
 #include "OPVFrameDecoder.h"
 #include "OPVFramer.h"
 #include "Util.h"
@@ -18,6 +19,8 @@
 #include <functional>
 #include <optional>
 #include <tuple>
+
+extern OPVCobsDecoder cobs_decoder;
 
 namespace mobilinkd {
 
@@ -282,7 +285,7 @@ void OPVDemodulator<FloatType>::do_unlocked()
 		auto sync_updated = preamble_sync.updated();
 		if (sync_updated)
 		{
-			std::cerr << "\nDetected preamble at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl;	//!!! debug
+			std::cerr << "Detected preamble at sample " << debug_sample_count << " (" << float(debug_sample_count)/samples_per_frame << " frames)" << std::endl;	//!!! debug
 			sync_count = 0;
 			missing_sync_count = 0;
 			need_clock_reset_ = true;
@@ -307,6 +310,7 @@ void OPVDemodulator<FloatType>::do_unlocked()
 		dev.reset();
 		update_values(sync_index);
 		sample_index = sync_index;
+		cobs_decoder.reset();
 		demodState = DemodState::FRAME;
 		return;
 	}
@@ -346,6 +350,7 @@ void OPVDemodulator<FloatType>::do_first_sync()
 		missing_sync_count = 0;
 		need_clock_update_ = true;
 		update_values(sample_index);
+		cobs_decoder.reset();
 		demodState = DemodState::FRAME;
 	}
 	else
@@ -446,7 +451,7 @@ void OPVDemodulator<FloatType>::do_frame(FloatType filtered_sample)
 	auto len = framer(llr_symbol, &framer_buffer_ptr);
 	if (len != 0)
 	{
-		std::cerr << "Framer returned " << len << " at sample " << debug_sample_count << std::endl;
+		// std::cerr << "Framer returned " << len << " at sample " << debug_sample_count << std::endl;
 		assert(len == stream_type4_size);
 
 		need_clock_update_ = true;

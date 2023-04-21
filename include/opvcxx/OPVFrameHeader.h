@@ -235,7 +235,7 @@ struct OPVFrameHeader
         }
         else
         {
-            std::cerr << "Frame header decoded, no changes" << std::endl;
+            // std::cerr << "Frame header decoded, no changes" << std::endl;
         }
 
         return result;

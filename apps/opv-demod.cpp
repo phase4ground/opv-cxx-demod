@@ -222,6 +222,15 @@ void diagnostic_callback(bool dcd, FloatType evm, FloatType deviation, FloatType
 }
 
 
+/**
+ * Packet handling callback that just prints out the packet size, for debug purposes.
+*/
+void dummy_packet_callback(const uint8_t *buf, unsigned int len)
+{
+    std::cout << " [" << len << "]" << std::endl;
+}
+
+
 int main(int argc, char* argv[])
 {
     config = Config::parse(argc, argv);
@@ -239,6 +248,7 @@ int main(int argc, char* argv[])
     using FloatType = float;
 
     OPVDemodulator<FloatType> demod(handle_frame);
+    cobs_decoder.set_packet_callback(dummy_packet_callback);
 
     demod.diagnostics(diagnostic_callback<FloatType>);
 
