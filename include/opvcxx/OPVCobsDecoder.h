@@ -113,6 +113,11 @@ struct OPVCobsDecoder
                 }
                 else if (decoded_count > 0) // we have a packet, and here's the end of it
                 {
+                    if (packet[decoded_count-1] == 0)   // check for extra "virtual zero" at the end
+                    {
+                        decoded_count--;    // trim it off
+                    }
+                    
                     if (decoded_count >= minimum_packet_length)
                     {
                         submit_decoded_packet(packet, decoded_count);
