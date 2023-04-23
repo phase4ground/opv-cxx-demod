@@ -421,20 +421,23 @@ opus_int32 build_opus_packet(OpusEncoder *opus_encoder, const audio_frame_t& aud
 // Fill in the minimal 12-byte RTP header
 void build_rtp_header(uint8_t* frame_buffer)
 {
-    //!!! leave it zeroes for now
+    //!!! dummy data
+    memcpy(frame_buffer, "RTP_RTP_RTP_", 12);
 }
 
 // Fill in the 8-byte UDP header
 void build_udp_header(uint8_t* frame_buffer)
 {
-    // leave it zeroes for now
+    // !!!dummy data
+    memcpy(frame_buffer, "UDPheadr", 8);
 }
 
 
 // Fill in the 20-byte IP header
 void build_ip_header(uint8_t* frame_buffer)
 {
-    // leave it zeroes for now
+    // !!! dummy data
+    memcpy(frame_buffer, "IP header goes on 20", 20);
 }
 
 
@@ -456,12 +459,15 @@ stream_frame_t fill_voice_frame(OpusEncoder *opus_encoder, const audio_frame_t& 
     stream_frame_t frame;
     stream_frame_t cobs_frame;
 
-    memset(&frame[0], 0, stream_frame_payload_bytes);
     opus_int32 opus_packet_length = build_opus_packet(opus_encoder, audio, &frame[total_protocol_bytes]);
-    build_rtp_header(&frame[total_protocol_bytes - rtp_header_bytes]);
-    build_udp_header(&frame[total_protocol_bytes - rtp_header_bytes - udp_header_bytes]);
-    build_ip_header(&frame[total_protocol_bytes - rtp_header_bytes - udp_header_bytes - ip_header_bytes]);
-    cobs_encode_voice_frame(&frame[cobs_overhead_bytes], &cobs_frame[0]);
+
+    memset(&frame[0], 0, stream_frame_payload_bytes);   // not really necessary
+    build_ip_header(&frame[0]);
+    build_udp_header(&frame[ip_header_bytes]);
+    build_rtp_header(&frame[ip_header_bytes+udp_header_bytes]);
+    build_opus_packet(opus_encoder, audio, &frame[ip_header_bytes+udp_header_bytes+rtp_header_bytes]);
+
+    cobs_encode_voice_frame(&frame[0], &cobs_frame[0]);
 
     return cobs_frame;
 }
