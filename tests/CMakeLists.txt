@@ -66,3 +66,7 @@ gtest_add_tests(FreqDevEstimatorTest "" AUTO)
 add_executable (CorrelatorTest CorrelatorTest.cpp)
 target_link_libraries(CorrelatorTest opvcxx GTest::GTest ${PTHREAD})
 gtest_add_tests(CorrelatorTest "" AUTO)
+
+add_executable (OPVCobsDecoderTest OPVCobsDecoderTest.cpp ../apps/cobs.c)
+target_link_libraries(OPVCobsDecoderTest opvcxx GTest::GTest ${PTHREAD})
+gtest_add_tests(OPVCobsDecoderTest "" AUTO)
