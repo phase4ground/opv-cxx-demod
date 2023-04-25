@@ -21,7 +21,7 @@ struct OPVCobsDecoder
     unsigned int remaining_count = 0;   // countdown of bytes expected in COBS-encoded input block
 
     // packet assembly buffer
-    uint8_t packet[mobilinkd::ip_mtu+2];
+    uint8_t packet[mobilinkd::ip_mtu+3];    // allow mtu+1 at loop end to accommodate virtual zero, plus up to 2 bytes added per iteration
 
     // Packet callback functions must copy the data before returning.
     using packet_callback_t = std::function<void(const uint8_t *, unsigned int)>;
@@ -117,8 +117,8 @@ struct OPVCobsDecoder
                     {
                         decoded_count--;    // trim it off
                     }
-                    
-                    if (decoded_count >= minimum_packet_length)
+
+                    if (decoded_count >= minimum_packet_length && decoded_count <= mobilinkd::ip_mtu)
                     {
                         submit_decoded_packet(packet, decoded_count);
                     }
@@ -166,7 +166,7 @@ struct OPVCobsDecoder
                 }
             }
 
-            if (decoded_count > mobilinkd::ip_mtu)    // packet length exceeds MTU, discard additional bytes
+            if (decoded_count > mobilinkd::ip_mtu+1)    // packet length exceeds MTU (with possible extra virtual 0); discard additional bytes
             {
                 state_ = State::PACKET_TOO_LONG;
             }
