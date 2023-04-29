@@ -70,3 +70,7 @@ gtest_add_tests(CorrelatorTest "" AUTO)
 add_executable (OPVCobsDecoderTest OPVCobsDecoderTest.cpp ../apps/cobs.c)
 target_link_libraries(OPVCobsDecoderTest opvcxx GTest::GTest ${PTHREAD})
 gtest_add_tests(OPVCobsDecoderTest "" AUTO)
+
+add_executable (OPVCobsDecoderRandomTest OPVCobsDecoderRandomTest.cpp ../apps/cobs.c)
+target_link_libraries(OPVCobsDecoderRandomTest opvcxx GTest::GTest ${PTHREAD})
+gtest_add_tests(OPVCobsDecoderRandomTest "" AUTO)
