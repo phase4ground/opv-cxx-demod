@@ -19,13 +19,13 @@ namespace mobilinkd
     const int fheader_size_bytes = 12;        // bytes in a frame header (multiple of 3 for Golay encoding)
     const int encoded_fheader_size = fheader_size_bytes * 8 * 2;    // bits in an encoded frame header
 
-    const int opus_frame_size_bytes = 40;   // bytes in an encoded 20ms Opus frame
-    const int opus_packet_size_bytes = 1 + 2 * opus_frame_size_bytes;   // one byte of overhead for Opus packet
-    const int rtp_header_bytes = 12;
-    const int udp_header_bytes = 8;
-    const int ip_header_bytes = 20;
-    const int cobs_overhead_bytes = 1;
-    const int total_protocol_bytes = rtp_header_bytes + udp_header_bytes + ip_header_bytes + cobs_overhead_bytes;
+    const int opus_frame_size_bytes = 40;   // bytes in an encoded 20ms Opus frame (including a TOC byte)
+    const int opus_packet_size_bytes = 1 + 2 * (opus_frame_size_bytes - 1);   // one TOC byte for both frames
+    const int rtp_header_bytes = 12;    // per RFC3550
+    const int udp_header_bytes = 8;     // per RFC768
+    const int ip_v4_header_bytes = 20;  // per RFC791 (IPv4 only)
+    const int cobs_overhead_bytes_for_opus = 3; // max of 1 byte COBS (since Opus packet < 254 byte) plus 0 separator !!! plus spare byte
+    const int total_protocol_bytes = rtp_header_bytes + udp_header_bytes + ip_v4_header_bytes + cobs_overhead_bytes_for_opus;
 
     const int stream_frame_payload_bytes = total_protocol_bytes + opus_packet_size_bytes;   // All frames carry this much type1 payload data
     const int stream_frame_payload_size = 8 * stream_frame_payload_bytes;

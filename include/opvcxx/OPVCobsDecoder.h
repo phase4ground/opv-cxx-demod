@@ -33,7 +33,7 @@ struct OPVCobsDecoder
     */
     void reset()
     {
-        std::cout << "Resetting COBS" << std::endl;
+        // std::cerr << "Resetting COBS" << std::endl;
         state_ = State::RESET;
         decoded_count = 0;
         remaining_count = 0;
@@ -190,7 +190,7 @@ struct OPVCobsDecoder
     void operator()(const uint8_t * buffer, size_t buffer_length)
     {
 
-        std::cerr << "Processing " << buffer_length << " COBS bytes" << std::endl;
+        // std::cerr << "Processing " << buffer_length << " COBS bytes" << std::endl;
 
         process_cobs_data(buffer, buffer_length);
     }

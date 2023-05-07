@@ -101,6 +101,7 @@ struct Config
         if (vm.count("version"))
         {
             std::cout << argv[0] << ": " << VERSION << std::endl;
+            std::cout << opus_get_version_string() << std::endl;
             return std::nullopt;
         }
 
@@ -384,30 +385,31 @@ using type3_data_frame_t = std::array<uint8_t, stream_type3_payload_size>;  // a
 // Convert 40ms of audio samples into an Opus packet containing two 20-ms Opus frames.
 opus_int32 build_opus_packet(OpusEncoder *opus_encoder, const audio_frame_t& audio, uint8_t* frame_buffer)
 {
+    opus_int32 count;
+    uint8_t first_opus_frame[opus_frame_size_bytes];
+    uint8_t second_opus_frame[opus_frame_size_bytes];
+    
+    static OpusRepacketizer *rp = opus_repacketizer_create();
 
-    // TOC Byte from RFC6716 Table 2:
-    //   config = 15 (01111), hybrid mode, full band, 20ms frames
-    //   s = 0, single channel (mono) mode
-    //   code = 01 (two frames with equal compressed size)
-    // ==>
-    //   0b01111001 = 0x79
-    uint8_t toc_byte = 0x79;
+    opus_repacketizer_init(rp);
 
-    frame_buffer[0] = toc_byte;
-    opus_int32 count = 1;
-
-    count += opus_encode(opus_encoder,
+    count = opus_encode(opus_encoder,
                         const_cast<int16_t*>(&audio[0]),
                         audio_samples_per_opus_frame,
-                        &frame_buffer[count],
+                        first_opus_frame,
                         opus_frame_size_bytes
                         );
-    count += opus_encode(opus_encoder,
+    opus_repacketizer_cat(rp, first_opus_frame, count);
+
+    count = opus_encode(opus_encoder,
                         const_cast<int16_t*>(&audio[audio_samples_per_opus_frame]),
                         audio_samples_per_opus_frame,
-                        &frame_buffer[count],
+                        second_opus_frame,
                         opus_frame_size_bytes
                         );
+    opus_repacketizer_cat(rp, second_opus_frame, count);
+
+    count = opus_repacketizer_out(rp, frame_buffer, opus_packet_size_bytes);
 
     if (count != opus_packet_size_bytes)
     {
@@ -426,18 +428,37 @@ void build_rtp_header(uint8_t* frame_buffer)
 }
 
 // Fill in the 8-byte UDP header
-void build_udp_header(uint8_t* frame_buffer)
+void build_udp_header(uint8_t* frame_buffer, int udp_length)
 {
-    // !!!dummy data
-    memcpy(frame_buffer, "UDPheadr", 8);
+    const uint16_t src_port = 54321;    // should probably be random
+    const uint16_t dst_port = 1234;
+    uint8_t udp_header[8] =
+    {
+        (uint8_t)(src_port/256), (uint8_t)(src_port%256),       // source port
+        (uint8_t)(dst_port/256), (uint8_t)(dst_port%256),       // destination port
+        (uint8_t)(udp_length/256), (uint8_t)(udp_length%256),   // length starting with UDP header
+        0x00, 0x00                                              // checksum
+    };
+
+    memcpy(frame_buffer, udp_header, 8);
+
+    // do we have to come back and fill in the checksum?
 }
 
 
-// Fill in the 20-byte IP header
-void build_ip_header(uint8_t* frame_buffer)
+// Fill in the 20-byte IPv4 header
+void build_ip_header(uint8_t* frame_buffer, int packet_len)
 {
-    // !!! dummy data
-    memcpy(frame_buffer, "IP header goes on 20", 20);
+    uint8_t ip_header[20] = { 0x45, 0x00, (uint8_t)(packet_len/256), (uint8_t)(packet_len%256), // version, x, x, len16
+                              0x00, 0x00, 0x00, 0x00,   // id, flags, frag
+                              64,   17,   0x00, 0x00,   // ttl, protocol=UDP, check16
+                              192,  168,  0,    1,      // src ip
+                              192,  168,  0,    2       // dst ip
+                            };
+
+    memcpy(frame_buffer, ip_header, 20);
+
+    // optionally, come back later and fill in checksum (0x0000 means don't check)
 }
 
 
@@ -446,9 +467,22 @@ void cobs_encode_voice_frame(uint8_t* frame, uint8_t* cobs_frame)
 {
     cobs_encode_result result;
 
-    result = cobs_encode(cobs_frame, stream_frame_payload_bytes, frame, stream_frame_payload_bytes - cobs_overhead_bytes);
-    if (result.out_len != stream_frame_payload_bytes || result.status != COBS_ENCODE_OK) {
-        fprintf(stderr, "Failure COBS encoding voice frame\n");
+    result = cobs_encode(cobs_frame, stream_frame_payload_bytes, frame, stream_frame_payload_bytes - cobs_overhead_bytes_for_opus);
+    if (result.out_len >= stream_frame_payload_bytes || result.status != COBS_ENCODE_OK)
+    {
+        fprintf(stderr, "Failure COBS encoding voice frame.\n");
+    }
+    else
+    {
+        // if (result.out_len != stream_frame_payload_bytes - 2)   //!!! a separator and a spare
+        // {
+        //     std::cerr << "Unexpected COBS length " << result.out_len << std::endl;
+        // }
+
+        for (int i=result.out_len; i < stream_frame_payload_bytes; i++)
+        {
+            cobs_frame[i] = 0;  // add zero separator(s) between COBS packets
+        }
     }
 }
 
@@ -459,13 +493,13 @@ stream_frame_t fill_voice_frame(OpusEncoder *opus_encoder, const audio_frame_t& 
     stream_frame_t frame;
     stream_frame_t cobs_frame;
 
-    opus_int32 opus_packet_length = build_opus_packet(opus_encoder, audio, &frame[total_protocol_bytes]);
+    memset(&frame[0], 0, stream_frame_payload_bytes);   // not really necessary 
+    build_opus_packet(opus_encoder, audio, &frame[ip_v4_header_bytes+udp_header_bytes+rtp_header_bytes]);
+    build_rtp_header(&frame[ip_v4_header_bytes+udp_header_bytes]);
+    build_udp_header(&frame[ip_v4_header_bytes], udp_header_bytes+rtp_header_bytes+opus_packet_size_bytes);
+    build_ip_header(&frame[0], ip_v4_header_bytes+udp_header_bytes+rtp_header_bytes+opus_packet_size_bytes);
 
-    memset(&frame[0], 0, stream_frame_payload_bytes);   // not really necessary
-    build_ip_header(&frame[0]);
-    build_udp_header(&frame[ip_header_bytes]);
-    build_rtp_header(&frame[ip_header_bytes+udp_header_bytes]);
-    build_opus_packet(opus_encoder, audio, &frame[ip_header_bytes+udp_header_bytes+rtp_header_bytes]);
+    assert(ip_v4_header_bytes+udp_header_bytes+rtp_header_bytes+opus_packet_size_bytes+cobs_overhead_bytes_for_opus == stream_frame_payload_bytes);
 
     cobs_encode_voice_frame(&frame[0], &cobs_frame[0]);
 

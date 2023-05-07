@@ -72,6 +72,7 @@ struct Config
         if (vm.count("version"))
         {
             std::cout << argv[0] << ": " << VERSION << std::endl;
+            std::cout << opus_get_version_string() << std::endl;
             return std::nullopt;
         }
 
@@ -96,53 +97,32 @@ struct Config
 
 std::optional<Config> config;
 
-#ifdef THISNEEDSTOBEUPDATED
-bool demodulate_audio(OPVFrameDecoder::stream_type1_opv_packet_bytes_t const& vocoded_audio, int viterbi_cost)
+void decode_and_output_audio(const uint8_t *encoded_audio, int encoded_len, int viterbi_cost)
 {
     std::array<int16_t, audio_samples_per_opv_frame> buf;
     opus_int32 count;
 
-    if (viterbi_cost > 80)
+    if (config->noise_blanker && viterbi_cost > 80)
     {
-        count = opus_decode(opus_decoder, NULL, opus_packet_size_bytes, buf.data(), audio_samples_per_opv_frame, 0);
-
-        if (config->noise_blanker)
+        buf.fill(0);
+        if (config->verbose)
         {
-            buf.fill(0);
+            std::cerr << "Frameout blanked" << std::endl;
         }
     }
     else
     {
-        count = opus_decode(opus_decoder, vocoded_audio.data(), opus_packet_size_bytes, buf.data(), audio_samples_per_opv_frame, 0);
+        // opus_decode can take the whole packet at once, no need to split out the frames.
+        count = opus_decode(opus_decoder, encoded_audio, opus_packet_size_bytes, buf.data(), audio_samples_per_opv_frame, 0);
     }
 
     std::cout.write((const char*)buf.data(), audio_bytes_per_opv_frame);
 
-    if (config->verbose)
+    if (config->verbose && count != audio_samples_per_opv_frame)
     {
-        if (config->noise_blanker && viterbi_cost > 80)
-        {
-            std::cerr << "Frameout blanked" << std::endl;
-        }
-        else if (viterbi_cost > 80)
-        {
-            std::cerr << "Frameout nulled" << std::endl;
-        }
-        else
-        {
-            std::cerr << "Frameout normal" << std:: endl;
-        }
-
-        if (count != audio_samples_per_opv_frame)
-        {
             std::cerr << "Opus decode error, " << count << " samples, expected " << audio_samples_per_opv_frame << std::endl;
-        }
-
     }
-
-    return true;
 }
-#endif
 
 bool decode_bert(OPVFrameDecoder::stream_type1_bytes_t const& bert_data)
 {
@@ -223,11 +203,26 @@ void diagnostic_callback(bool dcd, FloatType evm, FloatType deviation, FloatType
 
 
 /**
- * Packet handling callback that just prints out the packet size, for debug purposes.
+ * Packet handling callback. Very simple version for now.
+ * 
+ * Just prints out the packet size, for debug purposes, then assumes it must be voice data.
+ * 
+ * This should be processing IP, UDP, and RTP and dispatching accordingly. !!!
 */
 void dummy_packet_callback(const uint8_t *buf, unsigned int len)
 {
-    std::cout << " [" << len << "]" << std::endl;
+    if (len == ip_v4_header_bytes+udp_header_bytes+rtp_header_bytes+opus_packet_size_bytes)
+    {
+        decode_and_output_audio(buf+ip_v4_header_bytes+udp_header_bytes+rtp_header_bytes, opus_packet_size_bytes, 0);
+        if (config->verbose)
+        {
+            std::cerr << "Opus [" << len << "]" << std::endl;
+        }
+    }
+    else
+    {
+        std::cerr << "Unknown packet length " << len << std::endl;
+    }
 }
 
 
