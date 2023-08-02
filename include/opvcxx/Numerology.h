@@ -9,9 +9,6 @@ namespace mobilinkd
 
     const int audio_sample_rate = 48000;     // 16-bit PCM samples per second for audio signals
 
-    const int audio_samples_per_opus_frame = audio_sample_rate * 0.02;  // PCM samples per codec frame
-    const int audio_bytes_per_opus_frame = audio_samples_per_opus_frame * 2;    // bytes of PCM sample data per codec frame
-
     const int audio_samples_per_opv_frame = audio_sample_rate * 0.04;  // PCM samples per audio frame (two codec frames)
     const int audio_bytes_per_opv_frame = audio_samples_per_opv_frame * 2;  // 2 bytes per PCM sample
 
