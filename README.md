@@ -60,6 +60,14 @@ On some systems, gtest-devel is called libgtest-dev.
 
 It also requires a modern C++17 compiler (GCC 8 minimum).
 
+For Raspberry Pi OS as of version 5 (bookworm), try this:
+```
+sudo apt install libopus-dev
+sudo apt install libboost-dev libboost-program-options-dev
+sudo apt install libgtest-dev
+sudo apt install cmake
+```
+
 ## Build Steps (Linux etc.)
 ```
     mkdir build
