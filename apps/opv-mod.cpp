@@ -413,7 +413,7 @@ opus_int32 build_opus_packet(OpusEncoder *opus_encoder, const audio_frame_t& aud
 
     if (count != opus_packet_size_bytes)
     {
-        std::cerr << "Got unexpected encoded voice size" << count;
+        std::cerr << "Got unexpected encoded voice size " << count << std::endl;
     }
 
     return count;
