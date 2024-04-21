@@ -29,9 +29,8 @@ instead of from voice audio.
 ## About the Frame Format
 
 This version of opv-mod and opv-demod implements a simplified version of the frame
-format, used for initial testing. In this version, the voice payload is simply two
-20ms Opus frames concatenated. The two Opus frames are not combined into a proper
-Opus packet, or wrapped in any additional protocol layers.
+format, used for initial testing. In this version, the voice payload is a 40ms
+Opus frame.
 
 Each frame starts with a frame header, which contains a source callsign (encoded),
 an authentication token (dummied out), and a flag indicating whether the frame
