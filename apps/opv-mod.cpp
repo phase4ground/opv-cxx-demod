@@ -386,6 +386,7 @@ using type3_data_frame_t = std::array<uint8_t, stream_type3_payload_size>;  // a
 opus_int32 build_opus_packet(OpusEncoder *opus_encoder, const audio_frame_t& audio, uint8_t* frame_buffer)
 {
     opus_int32 count;
+    int status;
     uint8_t first_opus_frame[opus_frame_size_bytes];
     uint8_t second_opus_frame[opus_frame_size_bytes];
     
@@ -399,7 +400,16 @@ opus_int32 build_opus_packet(OpusEncoder *opus_encoder, const audio_frame_t& aud
                         first_opus_frame,
                         opus_frame_size_bytes
                         );
-    opus_repacketizer_cat(rp, first_opus_frame, count);
+    if (count != opus_frame_size_bytes)
+    {
+        std::cerr << "Unexpected size of first Opus frame " << count << std::endl;
+    }
+
+    status = opus_repacketizer_cat(rp, first_opus_frame, count);
+    if (status != OPUS_OK)
+    {
+        std::cerr << "Error adding first Opus frame to packet" << std::endl;
+    }
 
     count = opus_encode(opus_encoder,
                         const_cast<int16_t*>(&audio[audio_samples_per_opus_frame]),
@@ -407,7 +417,18 @@ opus_int32 build_opus_packet(OpusEncoder *opus_encoder, const audio_frame_t& aud
                         second_opus_frame,
                         opus_frame_size_bytes
                         );
-    opus_repacketizer_cat(rp, second_opus_frame, count);
+    if (count != opus_frame_size_bytes)
+    {
+        std::cerr << "Unexpected size of second Opus frame " << count << std::endl;
+    }
+
+    // std::cerr << "Packetizing ..." << std::hex << int(first_opus_frame[0]) << " " << int(second_opus_frame[0]) << std::dec << std::endl;
+
+    status = opus_repacketizer_cat(rp, second_opus_frame, count);
+    if (status != OPUS_OK)
+    {
+        std::cerr << "Error adding second Opus frame to packet" << std::endl;
+    }
 
     count = opus_repacketizer_out(rp, frame_buffer, opus_packet_size_bytes);
 
