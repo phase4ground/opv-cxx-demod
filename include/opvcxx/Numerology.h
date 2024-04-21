@@ -16,8 +16,8 @@ namespace mobilinkd
     const int fheader_size_bytes = 12;        // bytes in a frame header (multiple of 3 for Golay encoding)
     const int encoded_fheader_size = fheader_size_bytes * 8 * 2;    // bits in an encoded frame header
 
-    const int opus_frame_size_bytes = 40;   // bytes in an encoded 20ms Opus frame (including a TOC byte)
-    const int opus_packet_size_bytes = 1 + 2 * (opus_frame_size_bytes - 1);   // one TOC byte for both frames
+    const int opus_frame_size_bytes = 80;   // bytes in an encoded 40ms Opus frame (including a TOC byte)
+    const int opus_packet_size_bytes = opus_frame_size_bytes;   // exactly one frame per packet
     const int rtp_header_bytes = 12;    // per RFC3550
     const int udp_header_bytes = 8;     // per RFC768
     const int ip_v4_header_bytes = 20;  // per RFC791 (IPv4 only)

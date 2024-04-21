@@ -112,7 +112,7 @@ void decode_and_output_audio(const uint8_t *encoded_audio, int encoded_len, int 
     }
     else
     {
-        // opus_decode can take the whole packet at once, no need to split out the frames.
+        // opus_decode can take the whole packet at once, no need to split out the frames, if any.
         count = opus_decode(opus_decoder, encoded_audio, opus_packet_size_bytes, buf.data(), audio_samples_per_opv_frame, 0);
     }
 

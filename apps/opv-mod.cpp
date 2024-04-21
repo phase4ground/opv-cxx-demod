@@ -448,8 +448,8 @@ void cobs_encode_voice_frame(uint8_t* frame, uint8_t* cobs_frame)
     }
 }
 
-// Create the payload for a OPV-RPC frame, which contains a 40ms Opus frame
-// combined into an Opus packet, wrapped in RTP, UDP, and IP, and then framed with COBS.
+// Create the payload for a OPV-RPC frame, which contains a single 40ms Opus packet
+// wrapped in RTP, UDP, and IP, and then framed with COBS.
 stream_frame_t fill_voice_frame(OpusEncoder *opus_encoder, const audio_frame_t& audio)
 {
     stream_frame_t frame;
@@ -467,7 +467,7 @@ stream_frame_t fill_voice_frame(OpusEncoder *opus_encoder, const audio_frame_t& 
 
     if (count != opus_packet_size_bytes)
     {
-        std::cerr << "Got unexpected encoded voice size" << count;
+        std::cerr << "Got unexpected encoded voice size " << count << std::endl;
     }
 
     build_rtp_header(&frame[ip_v4_header_bytes+udp_header_bytes]);
