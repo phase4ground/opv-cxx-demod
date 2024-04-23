@@ -21,7 +21,7 @@ namespace mobilinkd
     const int rtp_header_bytes = 12;    // per RFC3550
     const int udp_header_bytes = 8;     // per RFC768
     const int ip_v4_header_bytes = 20;  // per RFC791 (IPv4 only)
-    const int cobs_overhead_bytes_for_opus = 3; // max of 1 byte COBS (since Opus packet < 254 byte) plus 0 separator !!! plus spare byte
+    const int cobs_overhead_bytes_for_opus = 2; // max of 1 byte COBS (since Opus packet < 254 byte) plus a 0 separator
     const int total_protocol_bytes = rtp_header_bytes + udp_header_bytes + ip_v4_header_bytes + cobs_overhead_bytes_for_opus;
 
     const int stream_frame_payload_bytes = total_protocol_bytes + opus_packet_size_bytes;   // All frames carry this much type1 payload data
