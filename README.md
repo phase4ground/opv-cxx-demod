@@ -16,7 +16,8 @@ to the desired reception frequency, and demodulates any frequency modulation at 
 frequency. That is to say, at a fixed sampling rate of 271,000 samples per second,
 it measures the instantaneous frequency as an offset from the desired center frequency,
 and provides that number as a signed 16-bit binary integer as two bytes (little-endian)
-on `opv-demod`'s standard input.
+on `opv-demod`'s standard input. This is the DSP equivalent of tapping into the
+discriminator in an FM receiver.
 
 `opv-demod` then completes the process of demodulating the received signal as 4-FSK
 at a symbol rate of 27,100 symbols per second (one symbol per 10 samples). It then
@@ -64,7 +65,7 @@ In this version, most of the protocol fields are largely dummied out.
 In place of audio, `opv-mod` can also generate a _bit error rate test_ (BERT)
 data stream of pseudo-random bytes and pack them into 40-ms frames.
 
-In future versions, `opv-mod` will accept IP packets (interface TBD), wraps them
+In future versions, `opv-mod` will accept IP packets (interface TBD), wrap them
 in COBS framing, and chop them up into 40-ms frames.
 
 Regardless of the data source, `opv-mod` then pre-modulates the frames into a
@@ -72,7 +73,8 @@ baseband stream of samples at 271,000 samples per second, 16-bit signed integers
 single channel, and writes them out as two bytes each (little-endian) to `stdout`.
 These go to the back-end program, which is responsible for FM modulating a radio
 transmission at the desired frequency. Typically, the companion program
-`pluto-tx-fm` is used with an ADALM PLUTO SDR.
+`pluto-tx-fm` is used with an ADALM PLUTO SDR. That program can be found at
+[pluto-tx-fm](https://github.com/openresearchinstitute/pluto-tx-fm).
 
 The output of the Pluto can be used directly on the bench, either by loosely
 coupling tiny antennas or through coaxial cable plus an attenuator (70 dB is good).
@@ -171,7 +173,7 @@ audio in raw format to a file, for later reference.
 
 Then the back end program (here `aplay`) is configured to accept the audio sample
 rate (48,000 samples per second) and data format ("raw" and "S16_LE", single channel)
-required by `opv-demod`.
+provided by `opv-demod`.
 
 If you include the `-d` flag to `opv-demod`, diagnostic information about the
 demodulation process is output to the terminal. You will want to use a terminal
@@ -191,7 +193,7 @@ output handled by helper programs. Here is a typical command line for transmitti
 Opulent Voice from a WAV-format audio file with `opv-mod`:
 
 ```
-sox yourfile.wav -t raw -c 1 -b 16 - | /path/to/opv-mod -S KB5MU | /path/to/pluto-tx-fm -f 436500500 -s 271000 -d 6000
+sox yourfile.wav -t raw -c 1 -b 16 -r 48000 - | /path/to/opv-mod -S KB5MU | /path/to/pluto-tx-fm -f 436500500 -s 271000 -d 6000
 ```
 
 The front end program, here `sox`, takes the input filename (in any understood format)
@@ -224,7 +226,7 @@ If you want to leave the RF out of the picture, you can stream samples directly 
 in the programs.
 
 ```
-sox yourfile.wav -t raw -c 1 -b 16 - | /path/to/opv-mod -S KB5MU | /path/to/opv-demod -d | tee received.raw | aplay -t raw -r 48000 -f S16_LE -c 1
+sox yourfile.wav -t raw -c 1 -b 16 -r 48000 - | /path/to/opv-mod -S KB5MU | /path/to/opv-demod -d | tee received.raw | aplay -t raw -r 48000 -f S16_LE -c 1
 ```
 
 Do not use `-b` to output a bitstream, since opv_demod only accepts baseband samples.
@@ -234,7 +236,7 @@ Do not use `-b` to output a bitstream, since opv_demod only accepts baseband sam
 
 To output a bitstream file:
 ```
-sox yourfile.wav -t raw -c 1 -b 16 - | /path/to/opv-mod -S KB5MU  -b > youroutfile.bin
+sox yourfile.wav -t raw -c 1 -b 16 -r 48000 - | /path/to/opv-mod -S KB5MU  -b > youroutfile.bin
 ```
 
 The -b flag tells `opv-mod` to output a bitstream of the unmodulated symbols.
@@ -254,7 +256,7 @@ raw audio stream and fed to the modulator using `sox` to convert on the fly, as 
 examples above. Or you can use `ffmpeg`, as shown in this example:
 
 ```
-    ffmpeg -i somefile.mp3 -ar 48000 -ac 1 -f s16le -acodec pcm_s16le - | opv-mod -b -S W5NYV > somefile.bin
+ffmpeg -i somefile.mp3 -ar 48000 -ac 1 -f s16le -acodec pcm_s16le - | opv-mod -b -S W5NYV > somefile.bin
 ```
 
 `somefile.bin` can then be used with the the `OPV_Impaired.grc` GNU Radio flow graph.
@@ -263,8 +265,6 @@ examples above. Or you can use `ffmpeg`, as shown in this example:
 
 Run the programs with `--help` to see all the command-line options.
 
-    -d causes demodulator diagnostics to be streamed to the terminal on `stderr`.
-
 ### A Note about Clock Accuracy
 
 Note that the oscillators on the PlutoSDR and on most RTL-SDR dongles are
@@ -272,11 +272,12 @@ rather inaccurate.  You will need to have both tuned to the same frequency,
 correcting for clock inaccuracies on one or both devices.
 
 A future goal for `opv-demod` is to adjust the frequency automatically over
-some range.
+a larger range.
 
 ### A Note about Offset Tuning
 
-Also note that you may need to use `-E offset` to decode the data well,
+Also note that you may need to rin `rtl_fm` with the
+`-E offset` command line argument in order to decode the data well,
 even though this appears in the `rtl_fm` output:
 
 ```
