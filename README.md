@@ -111,7 +111,9 @@ this version, the IP, UDP, and RTP headers are largely dummied out.
 In most other cases, including general purpose data transmission, the IP packets
 will not coincide with frame boundaries. The contents of successive frames are
 concatenated to form a byte stream, with packet boundaries defined by COBS encoding.
-In this version, this mode is not yet implemented.
+In this version of `opv-demod`, such packets are only processed by a dummy routine
+which prints out their length. This version of `opv-mod` has no way to generate
+such packets.
 
 Each transmission begins with a special preamble frame and ends with a special
 partial frame indicating _end of transmission_ (EOT). This version of `opv_mod`
