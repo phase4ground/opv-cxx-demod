@@ -38,3 +38,5 @@ build
 .vscode
 .ipynb_checkpoints
 
+# Macintosh leavings
+.DS_Store
