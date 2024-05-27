@@ -195,7 +195,7 @@ void diagnostic_callback(bool dcd, FloatType evm, FloatType deviation, FloatType
     
         auto ber = double(prbs.errors()) / double(prbs.bits());
         char buffer[40];
-        snprintf(buffer, 40, "BER: %-1.6lf (%lu bits)", ber, (long unsigned int)prbs.bits());
+        snprintf(buffer, 40, "BER: %-1.6lf (%lu bits)\r", ber, (long unsigned int)prbs.bits());
         std::cerr << buffer;
     }
     std::cerr << std::flush;
