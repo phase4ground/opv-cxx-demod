@@ -54,6 +54,7 @@ struct Config
     uint32_t bert = 0; // Frames of Bit error rate testing.
     uint64_t token = 0; // authentication token for frame header
     bool invert = false;
+    bool preamble_only = false;
 
     static std::optional<Config> parse(int argc, char* argv[])
     {
@@ -82,6 +83,7 @@ struct Config
             ("bert,B", po::value<uint32_t>(&result.bert)->default_value(0),
                 "number of BERT frames to output (default or 0 to read audio from STDIN instead).")
             ("invert,i", po::bool_switch(&result.invert), "invert the output baseband (ignored for bitstream)")
+            ("preamble,P", po::bool_switch(&result.preamble_only), "preamble-only output")
             ("verbose,v", po::bool_switch(&result.verbose), "verbose output")
             ("debug,d", po::bool_switch(&result.debug), "debug-level output")
             ("quiet,q", po::bool_switch(&result.quiet), "silence all output")
@@ -771,26 +773,15 @@ int main(int argc, char* argv[])
     send_dead_carrier();    // in simulation, this provides some space before the preamble starts
     send_preamble();
 
-    if (!config->bert) {
+    if (config->preamble_only) {
         running = true;
-        queue_t queue;
-        std::thread thd([&queue, &fh](){transmit(queue, fh);});
+        std::cerr << "opv-mod sending only preambles" << std::endl;
 
-        std::cerr << "opv-mod running. ctrl-D to break." << std::endl;
-
-        // Input must be 8000 SPS, 16-bit LE, 1 channel raw audio.
         while (running)
         {
-            int16_t sample;
-            if (!std::cin.read(reinterpret_cast<char*>(&sample), 2)) break;
-            if (!queue.put(sample, std::chrono::seconds(300))) break;
+            send_preamble();
         }
-
-        running = false;
-
-        queue.close();
-        thd.join();
-    } else {    // BERT mode
+    } else if (config->bert) {    // BERT mode
         PRBS9 prbs;
 
         running = true;
@@ -829,7 +820,26 @@ int main(int argc, char* argv[])
         
         output_eot();
         send_dead_carrier();    // simulate loss of signal
-    }
+    } else {    // Normal mode (voice, data)
+        running = true;
+        queue_t queue;
+        std::thread thd([&queue, &fh](){transmit(queue, fh);});
 
+        std::cerr << "opv-mod running. ctrl-D to break." << std::endl;
+
+        // Input must be 48000 SPS, 16-bit LE, 1 channel raw audio.
+        while (running)
+        {
+            int16_t sample;
+            if (!std::cin.read(reinterpret_cast<char*>(&sample), 2)) break;
+            if (!queue.put(sample, std::chrono::seconds(300))) break;
+        }
+
+        running = false;
+
+        queue.close();
+        thd.join();
+    }
+    
     return EXIT_SUCCESS;
 }
